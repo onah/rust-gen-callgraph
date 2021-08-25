@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut ana = Analyzer::new();
-    ana.run(filename);
+    ana.run(filename)?;
 
     let mut result: Vec<CallInfo> = Vec::new();
     for call in ana.calls.iter() {
@@ -38,10 +38,7 @@ impl Analyzer {
         }
     }
 
-    pub fn run(&mut self, filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-        let mut result: Vec<CallInfo> = Vec::new();
-        println!("{:#?}", filename);
-
+    pub fn run(&mut self, filename: PathBuf) -> Result<(), Box<dyn error::Error>> {
         let mut file = File::open(&filename)?;
         let mut src = String::new();
         file.read_to_string(&mut src)?;
@@ -56,7 +53,7 @@ impl Analyzer {
             }
         }
 
-        Ok(result)
+        Ok(())
     }
 
     fn walk_stmt(&mut self, items: Vec<syn::Stmt>) {
