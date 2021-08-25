@@ -1,14 +1,24 @@
 mod analyzer;
+mod create_graph;
+
 use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct CallInfo {
-    caller: String,
     callee: String,
+    caller: String,
 }
 
 pub fn run(input: Vec<PathBuf>) {
-    let calls: Vec<CallInfo> = Vec::new();
+    let mut calls: Vec<CallInfo> = Vec::new();
     for path in input {
-        analyzer::analyze(path).unwrap();
+        calls.append(&mut analyzer::analyze(path).unwrap());
     }
+
+    println!("{:#?}", calls);
+
+    /*
+    let graph = create_graph::GraphData {
+    }
+    */
 }
