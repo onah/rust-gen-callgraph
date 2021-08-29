@@ -73,15 +73,26 @@ impl Analyzer {
                 self.walk_expr(*expr_call.func);
             }
             syn::Expr::Path(expr_path) => {
-                for i in expr_path.path.segments.iter() {
-                    self.calls
-                        .push((i.ident.to_string(), self.current_function.clone().unwrap()));
-
-                    //println!("  - {:#?}", i.ident.to_string());
-                }
+                //println!("{}", punctuated_to_string(expr_path.path.segments));
+                self.calls.push((
+                    punctuated_to_string(expr_path.path.segments),
+                    self.current_function.clone().unwrap(),
+                ));
             }
 
             _ => (),
         }
     }
+}
+
+fn punctuated_to_string(
+    punctuated: syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
+) -> String {
+    let mut result = String::new();
+    for i in punctuated.iter() {
+        result = result + &i.ident.to_string() + "::";
+    }
+    result.pop();
+    result.pop();
+    result
 }
