@@ -8,29 +8,19 @@ use std::path::PathBuf;
 //use syn::spanned::Spanned;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-    let mut ana = Analyzer::new();
-    ana.run(filename)?;
-
-    let mut result: Vec<CallInfo> = Vec::new();
-    for call in ana.calls.iter() {
-        let callinfo = CallInfo {
-            callee: call.0.clone(),
-            caller: call.1.clone(),
-        };
-        result.push(callinfo);
-    }
-
-    Ok(result)
+    let mut analyzer = Analyzer::new();
+    analyzer.run(filename)?;
+    Ok(analyzer.calls)
 }
 
 struct Analyzer {
-    calls: Vec<(String, String)>,
+    calls: Vec<CallInfo>,
     current_function: Option<String>,
 }
 
 impl Analyzer {
     pub fn new() -> Analyzer {
-        let calls: Vec<(String, String)> = Vec::new();
+        let calls: Vec<CallInfo> = Vec::new();
         let current_function = None;
 
         Analyzer {
@@ -45,21 +35,24 @@ impl Analyzer {
         file.read_to_string(&mut src)?;
 
         let syntax = syn::parse_file(&src)?;
+        self.walk_file(syntax);
 
-        for item in syntax.items {
+        Ok(())
+    }
+
+    fn walk_file(&mut self, file: syn::File) {
+        for item in file.items {
             match item {
                 syn::Item::Fn(item_fn) => self.walk_item_fn(item_fn),
                 syn::Item::Impl(item_impl) => self.walk_item_impl(item_impl),
                 _ => (),
             }
         }
-
-        Ok(())
     }
 
     fn walk_item_fn(&mut self, item_fn: syn::ItemFn) {
         self.current_function = Some(item_fn.sig.ident.to_string());
-        self.walk_stmt(item_fn.block.stmts);
+        self.walk_block(*item_fn.block);
     }
 
     fn walk_item_impl(&mut self, item_impl: syn::ItemImpl) {
@@ -81,18 +74,21 @@ impl Analyzer {
         }
     }
 
-    fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
-        self.walk_stmt(method.block.stmts);
+    fn walk_block(&mut self, block: syn::Block) {
+        for stmt in block.stmts {
+            self.walk_stmt(stmt);
+        }
     }
 
-    fn walk_stmt(&mut self, items: Vec<syn::Stmt>) {
-        for item in items {
-            //println!("{:#?}", item);
-            match item {
-                syn::Stmt::Expr(expr) => self.walk_expr(expr),
-                syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr),
-                _ => (),
-            }
+    fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
+        self.walk_block(method.block);
+    }
+
+    fn walk_stmt(&mut self, stmt: syn::Stmt) {
+        match stmt {
+            syn::Stmt::Expr(expr) => self.walk_expr(expr),
+            syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr),
+            _ => (),
         }
     }
 
@@ -102,19 +98,30 @@ impl Analyzer {
                 self.walk_expr(*expr_call.func);
             }
             syn::Expr::Path(expr_path) => {
-                //println!("{}", punctuated_to_string(expr_path.path.segments));
-                self.calls.push((
-                    punctuated_to_string(expr_path.path.segments),
-                    self.current_function.clone().unwrap(),
-                ));
+                self.push_callinfo(punctuated_to_string(expr_path.path.segments));
             }
             syn::Expr::MethodCall(expr_methodcall) => {
-                //println!("{:?}", expr_methodcall.span().source_file());
-                println!("{:?}", expr_methodcall.method);
+                self.push_callinfo(expr_methodcall.method.to_string());
+            }
+            syn::Expr::If(expr_if) => {
+                self.walk_block(expr_if.then_branch);
+            }
+            syn::Expr::ForLoop(expr_forloop) => {
+                self.walk_block(expr_forloop.body);
             }
 
             _ => (),
         }
+    }
+
+    fn push_callinfo(&mut self, callee: String) {
+        let caller = self
+            .current_function
+            .clone()
+            .unwrap_or(String::from("NonData"));
+
+        let callinfo = CallInfo { callee, caller };
+        self.calls.push(callinfo);
     }
 }
 
