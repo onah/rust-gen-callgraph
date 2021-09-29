@@ -16,16 +16,16 @@ pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>
 struct Analyzer {
     calls: Vec<CallInfo>,
     current_function: Option<String>,
+    item_impl: Option<String>,
 }
 
 impl Analyzer {
     pub fn new() -> Analyzer {
         let calls: Vec<CallInfo> = Vec::new();
-        let current_function = None;
-
         Analyzer {
             calls,
-            current_function,
+            current_function: None,
+            item_impl: None,
         }
     }
 
@@ -58,8 +58,7 @@ impl Analyzer {
     fn walk_item_impl(&mut self, item_impl: syn::ItemImpl) {
         match *(item_impl.self_ty) {
             syn::Type::Path(type_path) => {
-                println!("debug");
-                println!("{}", punctuated_to_string(type_path.path.segments));
+                self.item_impl = Some(punctuated_to_string(type_path.path.segments));
             }
             _ => (),
         }
@@ -81,6 +80,12 @@ impl Analyzer {
     }
 
     fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
+        let mut curfun = String::new();
+        curfun.push_str(&(self.item_impl.clone().unwrap()));
+        curfun.push_str("::");
+        curfun.push_str(&(method.sig.ident.to_string()));
+
+        self.current_function = Some(curfun);
         self.walk_block(method.block);
     }
 
@@ -100,8 +105,22 @@ impl Analyzer {
             syn::Expr::Path(expr_path) => {
                 self.push_callinfo(punctuated_to_string(expr_path.path.segments));
             }
+
             syn::Expr::MethodCall(expr_methodcall) => {
-                self.push_callinfo(expr_methodcall.method.to_string());
+                let mut method_name = String::new();
+
+                match *(expr_methodcall.receiver) {
+                    syn::Expr::Path(expr_path) => {
+                        if "self" == punctuated_to_string(expr_path.path.segments) {
+                            method_name.push_str(&(self.item_impl.clone().unwrap()));
+                            method_name.push_str("::");
+                        }
+                    }
+                    _ => (),
+                }
+
+                method_name.push_str(&(expr_methodcall.method.to_string()));
+                self.push_callinfo(method_name);
             }
             syn::Expr::If(expr_if) => {
                 self.walk_block(expr_if.then_branch);
