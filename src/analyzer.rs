@@ -15,7 +15,7 @@ pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>
 
 struct Analyzer {
     calls: Vec<CallInfo>,
-    current_function: Option<String>,
+    //current_function: Option<String>,
     item_impl: Option<String>,
 }
 
@@ -24,7 +24,7 @@ impl Analyzer {
         let calls: Vec<CallInfo> = Vec::new();
         Analyzer {
             calls,
-            current_function: None,
+            //current_function: None,
             item_impl: None,
         }
     }
@@ -51,8 +51,9 @@ impl Analyzer {
     }
 
     fn walk_item_fn(&mut self, item_fn: syn::ItemFn) {
-        self.current_function = Some(item_fn.sig.ident.to_string());
-        self.walk_block(*item_fn.block);
+        //self.current_function = Some(item_fn.sig.ident.to_string());
+        let caller = item_fn.sig.ident.to_string();
+        self.walk_block(*item_fn.block, caller);
     }
 
     fn walk_item_impl(&mut self, item_impl: syn::ItemImpl) {
@@ -73,37 +74,38 @@ impl Analyzer {
         }
     }
 
-    fn walk_block(&mut self, block: syn::Block) {
+    fn walk_block(&mut self, block: syn::Block, caller: String) {
         for stmt in block.stmts {
-            self.walk_stmt(stmt);
+            self.walk_stmt(stmt, caller.clone());
         }
     }
 
     fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
-        let mut curfun = String::new();
-        curfun.push_str(&(self.item_impl.clone().unwrap()));
-        curfun.push_str("::");
-        curfun.push_str(&(method.sig.ident.to_string()));
+        // TODO: delete current_function
+        let mut caller = String::new();
+        caller.push_str(&(self.item_impl.clone().unwrap()));
+        caller.push_str("::");
+        caller.push_str(&(method.sig.ident.to_string()));
 
-        self.current_function = Some(curfun);
-        self.walk_block(method.block);
+        //self.current_function = Some(caller);
+        self.walk_block(method.block, caller);
     }
 
-    fn walk_stmt(&mut self, stmt: syn::Stmt) {
+    fn walk_stmt(&mut self, stmt: syn::Stmt, caller: String) {
         match stmt {
-            syn::Stmt::Expr(expr) => self.walk_expr(expr),
-            syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr),
+            syn::Stmt::Expr(expr) => self.walk_expr(expr, caller),
+            syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr, caller),
             _ => (),
         }
     }
 
-    fn walk_expr(&mut self, item: syn::Expr) {
+    fn walk_expr(&mut self, item: syn::Expr, caller: String) {
         match item {
             syn::Expr::Call(expr_call) => {
-                self.walk_expr(*expr_call.func);
+                self.walk_expr(*expr_call.func, caller);
             }
             syn::Expr::Path(expr_path) => {
-                self.push_callinfo(punctuated_to_string(expr_path.path.segments));
+                self.push_callinfo(punctuated_to_string(expr_path.path.segments), caller);
             }
 
             syn::Expr::MethodCall(expr_methodcall) => {
@@ -120,24 +122,24 @@ impl Analyzer {
                 }
 
                 method_name.push_str(&(expr_methodcall.method.to_string()));
-                self.push_callinfo(method_name);
+                self.push_callinfo(method_name, caller);
             }
             syn::Expr::If(expr_if) => {
-                self.walk_block(expr_if.then_branch);
+                self.walk_block(expr_if.then_branch, caller);
             }
             syn::Expr::ForLoop(expr_forloop) => {
-                self.walk_block(expr_forloop.body);
+                self.walk_block(expr_forloop.body, caller);
             }
 
             _ => (),
         }
     }
 
-    fn push_callinfo(&mut self, callee: String) {
-        let caller = self
-            .current_function
-            .clone()
-            .unwrap_or(String::from("NonData"));
+    fn push_callinfo(&mut self, callee: String, caller: String) {
+        //let caller = self
+        //    .current_function
+        //    .clone()
+        //    .unwrap_or(String::from("NonData"));
 
         let callinfo = CallInfo { callee, caller };
         self.calls.push(callinfo);
