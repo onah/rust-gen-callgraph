@@ -51,9 +51,8 @@ impl Analyzer {
     }
 
     fn walk_item_fn(&mut self, item_fn: syn::ItemFn) {
-        //self.current_function = Some(item_fn.sig.ident.to_string());
-        let caller = item_fn.sig.ident.to_string();
-        self.walk_block(*item_fn.block, caller);
+        let fn_name = item_fn.sig.ident.to_string();
+        self.walk_block(*item_fn.block, &fn_name);
     }
 
     fn walk_item_impl(&mut self, item_impl: syn::ItemImpl) {
@@ -74,9 +73,9 @@ impl Analyzer {
         }
     }
 
-    fn walk_block(&mut self, block: syn::Block, caller: String) {
+    fn walk_block(&mut self, block: syn::Block, fn_name: &String) {
         for stmt in block.stmts {
-            self.walk_stmt(stmt, caller.clone());
+            self.walk_stmt(stmt, fn_name);
         }
     }
 
@@ -88,10 +87,10 @@ impl Analyzer {
         caller.push_str(&(method.sig.ident.to_string()));
 
         //self.current_function = Some(caller);
-        self.walk_block(method.block, caller);
+        self.walk_block(method.block, &caller);
     }
 
-    fn walk_stmt(&mut self, stmt: syn::Stmt, caller: String) {
+    fn walk_stmt(&mut self, stmt: syn::Stmt, caller: &String) {
         match stmt {
             syn::Stmt::Expr(expr) => self.walk_expr(expr, caller),
             syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr, caller),
@@ -99,7 +98,7 @@ impl Analyzer {
         }
     }
 
-    fn walk_expr(&mut self, item: syn::Expr, caller: String) {
+    fn walk_expr(&mut self, item: syn::Expr, caller: &String) {
         match item {
             syn::Expr::Call(expr_call) => {
                 self.walk_expr(*expr_call.func, caller);
@@ -135,13 +134,16 @@ impl Analyzer {
         }
     }
 
-    fn push_callinfo(&mut self, callee: String, caller: String) {
+    fn push_callinfo(&mut self, callee: String, caller: &String) {
         //let caller = self
         //    .current_function
         //    .clone()
         //    .unwrap_or(String::from("NonData"));
 
-        let callinfo = CallInfo { callee, caller };
+        let callinfo = CallInfo {
+            callee,
+            caller: caller.to_string(),
+        };
         self.calls.push(callinfo);
     }
 }
