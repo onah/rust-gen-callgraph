@@ -13,31 +13,65 @@ pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>
     Ok(analyzer.calls)
 }
 
-struct Status {
-    current_function: Option<String>,
+enum FunctionOrMethod {
+    Function(String),
+    Method(String),
+}
+
+struct FnInfo {
+    current_function: Option<FunctionOrMethod>,
     current_impl: Option<String>,
     filename: Option<PathBuf>,
 }
 
-impl Status {
-    pub fn new() -> Status {
-        Status {
+impl FnInfo {
+    pub fn new() -> FnInfo {
+        FnInfo {
             current_function: None,
             current_impl: None,
             filename: None,
         }
     }
+
+    pub fn get_caller_name(&self) -> String {
+        let mut caller = String::new();
+
+        match &self.current_function {
+            Some(func) => match func {
+                FunctionOrMethod::Function(name) => {
+                    caller.push_str(
+                        self.filename
+                            .clone()
+                            .unwrap()
+                            .file_stem()
+                            .unwrap()
+                            .to_str()
+                            .unwrap(),
+                    );
+                    caller.push_str("::");
+                    caller.push_str(&name)
+                }
+                FunctionOrMethod::Method(name) => {
+                    caller.push_str(&self.current_impl.clone().unwrap());
+                    caller.push_str("::");
+                    caller.push_str(&name);
+                }
+            },
+            None => caller.push_str("NonData"),
+        }
+        caller
+    }
 }
 
 struct Analyzer {
     calls: Vec<CallInfo>,
-    status: Status,
+    status: FnInfo,
 }
 
 impl Analyzer {
     pub fn new() -> Analyzer {
         let calls: Vec<CallInfo> = Vec::new();
-        let status = Status::new();
+        let status = FnInfo::new();
 
         Analyzer { calls, status }
     }
@@ -68,6 +102,7 @@ impl Analyzer {
     }
 
     fn walk_item_fn(&mut self, item_fn: syn::ItemFn) {
+        /*
         let mut caller = String::new();
         caller.push_str(
             self.status
@@ -81,11 +116,13 @@ impl Analyzer {
         );
         caller.push_str("::");
         caller.push_str(&item_fn.sig.ident.to_string());
+        */
 
         //let fn_name = item_fn.sig.ident.to_string();
         //self.status.current_function = Some(fn_name);
 
-        self.status.current_function = Some(caller);
+        self.status.current_function =
+            Some(FunctionOrMethod::Function(item_fn.sig.ident.to_string()));
         self.walk_block(*item_fn.block);
         self.status.current_function = None;
     }
@@ -113,12 +150,14 @@ impl Analyzer {
     }
 
     fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
+        /*
         let mut caller = String::new();
         caller.push_str(&self.status.current_impl.clone().unwrap());
         caller.push_str("::");
         caller.push_str(&(method.sig.ident.to_string()));
+        */
 
-        self.status.current_function = Some(caller);
+        self.status.current_function = Some(FunctionOrMethod::Method(method.sig.ident.to_string()));
         self.walk_block(method.block);
         self.status.current_function = None;
     }
@@ -137,8 +176,7 @@ impl Analyzer {
                 self.walk_expr(*expr_call.func);
             }
             syn::Expr::Path(expr_path) => {
-                let caller = self.status.current_function.clone().unwrap();
-                self.push_callinfo(punctuated_to_string(expr_path.path.segments), caller);
+                self.push_callinfo(punctuated_to_string(expr_path.path.segments));
             }
 
             syn::Expr::MethodCall(expr_methodcall) => {
@@ -161,8 +199,7 @@ impl Analyzer {
                 }
 
                 method_name.push_str(&(expr_methodcall.method.to_string()));
-                let caller = self.status.current_function.clone().unwrap();
-                self.push_callinfo(method_name, caller);
+                self.push_callinfo(method_name);
             }
             syn::Expr::If(expr_if) => self.walk_block(expr_if.then_branch),
 
@@ -180,13 +217,16 @@ impl Analyzer {
         }
     }
 
-    fn push_callinfo(&mut self, callee: String, caller: String) {
+    fn push_callinfo(&mut self, callee: String) {
         //let caller = self
         //    .current_function
         //    .clone()
         //    .unwrap_or(String::from("NonData"));
 
-        let callinfo = CallInfo { callee, caller };
+        let callinfo = CallInfo {
+            callee: callee,
+            caller: self.status.get_caller_name(),
+        };
         self.calls.push(callinfo);
     }
 }
