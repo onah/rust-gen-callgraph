@@ -2,10 +2,12 @@ extern crate syn;
 
 use super::CallInfo;
 use std::error;
+use std::ffi::OsStr;
 use std::fs::File;
+//use std::io::prelude::*;
 use std::io::Read;
 use std::path::PathBuf;
-//use syn::spanned::Spanned;
+use toml;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut analyzer = Analyzer::new();
@@ -39,15 +41,9 @@ impl FnInfo {
         match &self.current_function {
             Some(func) => match func {
                 FunctionOrMethod::Function(name) => {
-                    caller.push_str(
-                        self.filename
-                            .clone()
-                            .unwrap()
-                            .file_stem()
-                            .unwrap()
-                            .to_str()
-                            .unwrap(),
-                    );
+                    caller.push_str(&FnInfo::filename_to_modulename(
+                        &self.filename.clone().unwrap(),
+                    ));
                     caller.push_str("::");
                     caller.push_str(&name)
                 }
@@ -57,9 +53,30 @@ impl FnInfo {
                     caller.push_str(&name);
                 }
             },
-            None => caller.push_str("NonData"),
+            None => caller.push_str("NoData"),
         }
         caller
+    }
+
+    fn filename_to_modulename(filename: &PathBuf) -> String {
+        let result;
+
+        println!("{:#?}", filename);
+
+        if filename == OsStr::new("./src/lib.rs") {
+            let mut f = File::open("Cargo.toml").unwrap();
+            let mut contents = String::new();
+            f.read_to_string(&mut contents).unwrap();
+
+            let values = contents.parse::<toml::Value>().unwrap();
+            let project_name = values["package"]["name"].as_str().unwrap();
+
+            result = String::from(project_name);
+        } else {
+            result = filename.file_stem().unwrap().to_str().unwrap().to_string()
+        }
+
+        result
     }
 }
 
@@ -172,17 +189,21 @@ impl Analyzer {
 
     fn walk_expr(&mut self, item: syn::Expr) {
         match item {
-            syn::Expr::Call(expr_call) => {
-                self.walk_expr(*expr_call.func);
-            }
-            syn::Expr::Path(expr_path) => {
-                self.push_callinfo(punctuated_to_string(expr_path.path.segments));
-            }
+            syn::Expr::Call(expr_call) => match *expr_call.func {
+                syn::Expr::Path(expr_path) => {
+                    self.push_callinfo(punctuated_to_string(expr_path.path.segments));
+                }
+                _ => self.walk_expr(*expr_call.func),
+            },
 
             syn::Expr::MethodCall(expr_methodcall) => {
                 let mut method_name = String::new();
 
-                match *(expr_methodcall.receiver) {
+                for expr in expr_methodcall.args.iter() {
+                    self.walk_expr(expr.clone());
+                }
+
+                match *expr_methodcall.receiver {
                     syn::Expr::Path(expr_path) => {
                         if "self" == punctuated_to_string(expr_path.path.segments) {
                             method_name.push_str(
@@ -195,7 +216,7 @@ impl Analyzer {
                             method_name.push_str("::");
                         }
                     }
-                    _ => (),
+                    _ => self.walk_expr(*expr_methodcall.receiver),
                 }
 
                 method_name.push_str(&(expr_methodcall.method.to_string()));
@@ -213,6 +234,10 @@ impl Analyzer {
                 }
             }
 
+            syn::Expr::Reference(expr_reference) => {
+                self.walk_expr(*expr_reference.expr);
+            }
+
             _ => (),
         }
     }
@@ -224,7 +249,7 @@ impl Analyzer {
         //    .unwrap_or(String::from("NonData"));
 
         let callinfo = CallInfo {
-            callee: callee,
+            callee,
             caller: self.status.get_caller_name(),
         };
         self.calls.push(callinfo);

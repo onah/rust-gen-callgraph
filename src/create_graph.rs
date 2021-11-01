@@ -31,7 +31,8 @@ impl<'a> dot::Labeller<'a, Nd, Ed> for GraphData {
     }
 
     fn node_id(&'a self, n: &Nd) -> dot::Id<'a> {
-        let id = n.replace(":", "_");
+        let id = n.replace(":", "_").replace("-", "_");
+        //println!("{:#?}", id);
         dot::Id::new(id).unwrap()
     }
 
