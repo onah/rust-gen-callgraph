@@ -4,14 +4,24 @@ use super::CallInfo;
 use std::error;
 use std::ffi::OsStr;
 use std::fs::File;
-//use std::io::prelude::*;
 use std::io::Read;
 use std::path::PathBuf;
+use syn::visit::Visit;
 use toml;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-    let mut analyzer = Analyzer::new();
-    analyzer.run(filename)?;
+    let mut analyzer = Analyzer2::new();
+
+    let mut file = File::open(&filename)?;
+    let mut src = String::new();
+    file.read_to_string(&mut src)?;
+
+    let syntax = syn::parse_file(&src)?;
+
+    analyzer.status.filename = Some(filename);
+    analyzer.visit_file(&syntax);
+    analyzer.status.filename = None;
+
     Ok(analyzer.calls)
 }
 
@@ -61,8 +71,6 @@ impl FnInfo {
     fn filename_to_modulename(filename: &PathBuf) -> String {
         let result;
 
-        println!("{:#?}", filename);
-
         if filename == OsStr::new("./src/lib.rs") {
             let mut f = File::open("Cargo.toml").unwrap();
             let mut contents = String::new();
@@ -80,190 +88,96 @@ impl FnInfo {
     }
 }
 
-struct Analyzer {
+struct Analyzer2 {
     calls: Vec<CallInfo>,
     status: FnInfo,
 }
 
-impl Analyzer {
-    pub fn new() -> Analyzer {
+impl Analyzer2 {
+    pub fn new() -> Analyzer2 {
         let calls: Vec<CallInfo> = Vec::new();
         let status = FnInfo::new();
 
-        Analyzer { calls, status }
-    }
-
-    pub fn run(&mut self, filename: PathBuf) -> Result<(), Box<dyn error::Error>> {
-        let mut file = File::open(&filename)?;
-        let mut src = String::new();
-        file.read_to_string(&mut src)?;
-
-        self.status.filename = Some(filename);
-
-        let syntax = syn::parse_file(&src)?;
-        self.walk_file(syntax);
-
-        self.status.filename = None;
-
-        Ok(())
-    }
-
-    fn walk_file(&mut self, file: syn::File) {
-        for item in file.items {
-            match item {
-                syn::Item::Fn(item_fn) => self.walk_item_fn(item_fn),
-                syn::Item::Impl(item_impl) => self.walk_item_impl(item_impl),
-                _ => (),
-            }
-        }
-    }
-
-    fn walk_item_fn(&mut self, item_fn: syn::ItemFn) {
-        /*
-        let mut caller = String::new();
-        caller.push_str(
-            self.status
-                .filename
-                .clone()
-                .unwrap()
-                .file_stem()
-                .unwrap()
-                .to_str()
-                .unwrap(),
-        );
-        caller.push_str("::");
-        caller.push_str(&item_fn.sig.ident.to_string());
-        */
-
-        //let fn_name = item_fn.sig.ident.to_string();
-        //self.status.current_function = Some(fn_name);
-
-        self.status.current_function =
-            Some(FunctionOrMethod::Function(item_fn.sig.ident.to_string()));
-        self.walk_block(*item_fn.block);
-        self.status.current_function = None;
-    }
-
-    fn walk_item_impl(&mut self, item_impl: syn::ItemImpl) {
-        if let syn::Type::Path(type_path) = *(item_impl.self_ty) {
-            self.status.current_impl = Some(punctuated_to_string(type_path.path.segments));
-        }
-
-        for item in item_impl.items {
-            match item {
-                syn::ImplItem::Method(impl_item_method) => {
-                    self.walk_impl_item_method(impl_item_method);
-                }
-                _ => (),
-            }
-        }
-        self.status.current_impl = None;
-    }
-
-    fn walk_block(&mut self, block: syn::Block) {
-        for stmt in block.stmts {
-            self.walk_stmt(stmt);
-        }
-    }
-
-    fn walk_impl_item_method(&mut self, method: syn::ImplItemMethod) {
-        /*
-        let mut caller = String::new();
-        caller.push_str(&self.status.current_impl.clone().unwrap());
-        caller.push_str("::");
-        caller.push_str(&(method.sig.ident.to_string()));
-        */
-
-        self.status.current_function = Some(FunctionOrMethod::Method(method.sig.ident.to_string()));
-        self.walk_block(method.block);
-        self.status.current_function = None;
-    }
-
-    fn walk_stmt(&mut self, stmt: syn::Stmt) {
-        match stmt {
-            syn::Stmt::Expr(expr) => self.walk_expr(expr),
-            syn::Stmt::Semi(expr, _semi) => self.walk_expr(expr),
-            _ => (),
-        }
-    }
-
-    fn walk_expr(&mut self, item: syn::Expr) {
-        match item {
-            syn::Expr::Call(expr_call) => match *expr_call.func {
-                syn::Expr::Path(expr_path) => {
-                    self.push_callinfo(punctuated_to_string(expr_path.path.segments));
-                }
-                _ => self.walk_expr(*expr_call.func),
-            },
-
-            syn::Expr::MethodCall(expr_methodcall) => {
-                let mut method_name = String::new();
-
-                for expr in expr_methodcall.args.iter() {
-                    self.walk_expr(expr.clone());
-                }
-
-                match *expr_methodcall.receiver {
-                    syn::Expr::Path(expr_path) => {
-                        if "self" == punctuated_to_string(expr_path.path.segments) {
-                            method_name.push_str(
-                                &(self
-                                    .status
-                                    .current_impl
-                                    .clone()
-                                    .unwrap_or(String::from("NonImpl"))),
-                            );
-                            method_name.push_str("::");
-                        }
-                    }
-                    _ => self.walk_expr(*expr_methodcall.receiver),
-                }
-
-                method_name.push_str(&(expr_methodcall.method.to_string()));
-                self.push_callinfo(method_name);
-            }
-            syn::Expr::If(expr_if) => self.walk_block(expr_if.then_branch),
-
-            syn::Expr::ForLoop(expr_forloop) => self.walk_block(expr_forloop.body),
-
-            syn::Expr::Block(expr_block) => self.walk_block(expr_block.block),
-
-            syn::Expr::Match(expr_match) => {
-                for arm in expr_match.arms {
-                    self.walk_expr(*arm.body);
-                }
-            }
-
-            syn::Expr::Reference(expr_reference) => {
-                self.walk_expr(*expr_reference.expr);
-            }
-
-            _ => (),
-        }
+        Analyzer2 { calls, status }
     }
 
     fn push_callinfo(&mut self, callee: String) {
-        //let caller = self
-        //    .current_function
-        //    .clone()
-        //    .unwrap_or(String::from("NonData"));
-
         let callinfo = CallInfo {
             callee,
             caller: self.status.get_caller_name(),
         };
         self.calls.push(callinfo);
     }
+
+    fn punctuated_to_string(
+        &self,
+        punctuated: &syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
+    ) -> String {
+        let mut result = String::new();
+
+        // TODO: other implementation ?
+
+        for i in punctuated.iter() {
+            result = result + &i.ident.to_string() + "::";
+        }
+
+        // Delete last "::"
+        result.pop();
+        result.pop();
+
+        result
+    }
 }
 
-fn punctuated_to_string(
-    punctuated: syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
-) -> String {
-    let mut result = String::new();
-    for i in punctuated.iter() {
-        result = result + &i.ident.to_string() + "::";
+impl<'ast> syn::visit::Visit<'ast> for Analyzer2 {
+    fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
+        self.status.current_function = Some(FunctionOrMethod::Function(node.sig.ident.to_string()));
+        syn::visit::visit_item_fn(self, node);
+        self.status.current_function = None;
     }
-    result.pop();
-    result.pop();
-    result
+
+    fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
+        if let syn::Type::Path(type_path) = &*node.self_ty {
+            self.status.current_impl = Some(self.punctuated_to_string(&type_path.path.segments));
+        }
+
+        syn::visit::visit_item_impl(self, node);
+
+        self.status.current_impl = None;
+    }
+
+    fn visit_impl_item_method(&mut self, node: &'ast syn::ImplItemMethod) {
+        self.status.current_function = Some(FunctionOrMethod::Method(node.sig.ident.to_string()));
+
+        syn::visit::visit_impl_item_method(self, node);
+        self.status.current_function = None;
+    }
+
+    fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
+        if let syn::Expr::Path(expr_path) = &*node.func {
+            self.push_callinfo(self.punctuated_to_string(&expr_path.path.segments));
+        }
+        syn::visit::visit_expr_call(self, node);
+    }
+
+    fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
+        let mut method_name = String::new();
+        if let syn::Expr::Path(expr_path) = &*node.receiver {
+            if "self" == self.punctuated_to_string(&expr_path.path.segments) {
+                method_name.push_str(
+                    &(self
+                        .status
+                        .current_impl
+                        .clone()
+                        .unwrap_or(String::from("NonImpl"))),
+                );
+                method_name.push_str("::");
+            }
+        }
+
+        method_name.push_str(&(node.method.to_string()));
+        self.push_callinfo(method_name);
+
+        syn::visit::visit_expr_method_call(self, node);
+    }
 }
