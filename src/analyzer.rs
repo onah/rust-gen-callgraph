@@ -10,7 +10,7 @@ use syn::visit::Visit;
 use toml;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-    let mut analyzer = Analyzer2::new();
+    let mut analyzer = Analyzer::new();
 
     let mut file = File::open(&filename)?;
     let mut src = String::new();
@@ -80,25 +80,45 @@ impl FnInfo {
             let project_name = values["package"]["name"].as_str().unwrap();
 
             result = String::from(project_name);
+        } else if filename.file_name().unwrap() == OsStr::new("lib.rs") {
+            let mut filename2 = filename.clone();
+            filename2.pop();
+            if filename2.file_name().unwrap() == OsStr::new("src") {
+                filename2.pop();
+                {
+                    // TODO Copy Code Refactoring
+                    let mut f =
+                        File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap())).unwrap();
+                    let mut contents = String::new();
+                    f.read_to_string(&mut contents).unwrap();
+
+                    let values = contents.parse::<toml::Value>().unwrap();
+                    let project_name = values["package"]["name"].as_str().unwrap();
+
+                    result = String::from(project_name);
+                }
+            } else {
+                result = filename2.file_stem().unwrap().to_str().unwrap().to_string();
+            }
         } else {
-            result = filename.file_stem().unwrap().to_str().unwrap().to_string()
+            result = filename.file_stem().unwrap().to_str().unwrap().to_string();
         }
 
         result
     }
 }
 
-struct Analyzer2 {
+struct Analyzer {
     calls: Vec<CallInfo>,
     status: FnInfo,
 }
 
-impl Analyzer2 {
-    pub fn new() -> Analyzer2 {
+impl Analyzer {
+    pub fn new() -> Analyzer {
         let calls: Vec<CallInfo> = Vec::new();
         let status = FnInfo::new();
 
-        Analyzer2 { calls, status }
+        Analyzer { calls, status }
     }
 
     fn push_callinfo(&mut self, callee: String) {
@@ -129,7 +149,7 @@ impl Analyzer2 {
     }
 }
 
-impl<'ast> syn::visit::Visit<'ast> for Analyzer2 {
+impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
         self.status.current_function = Some(FunctionOrMethod::Function(node.sig.ident.to_string()));
         syn::visit::visit_item_fn(self, node);

@@ -4,6 +4,20 @@ mod create_graph;
 use std::fs::File;
 use std::path::PathBuf;
 
+/*
+#[derive(Debug)]
+pub struct FunctionInfo {
+    path: Vec<String>,
+    name: String,
+}
+
+#[derive(Debug)]
+pub struct CallInfo {
+    callee: FunctionInfo,
+    caller: FunctionInfo,
+}
+*/
+
 #[derive(Debug)]
 pub struct CallInfo {
     callee: String,
