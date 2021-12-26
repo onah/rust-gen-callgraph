@@ -20,18 +20,18 @@ pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>
 
     analyzer.status.filename = Some(filename);
     analyzer.visit_file(&syntax);
-    analyzer.status.filename = None;
+    //analyzer.status.filename = None;
 
     Ok(analyzer.calls)
 }
 
-enum FunctionOrMethod {
-    Function(String),
-    Method(String),
+enum KindCaller {
+    Function(Vec<String>),
+    Method(Vec<String>),
 }
 
 struct FnInfo {
-    current_function: Option<FunctionOrMethod>,
+    current_function: Option<KindCaller>,
     current_impl: Option<String>,
     filename: Option<PathBuf>,
 }
@@ -50,17 +50,17 @@ impl FnInfo {
 
         match &self.current_function {
             Some(func) => match func {
-                FunctionOrMethod::Function(name) => {
+                KindCaller::Function(name) => {
                     caller.push_str(&FnInfo::filename_to_modulename(
                         &self.filename.clone().unwrap(),
                     ));
                     caller.push_str("::");
-                    caller.push_str(&name)
+                    caller.push_str(&name.join("::"));
                 }
-                FunctionOrMethod::Method(name) => {
+                KindCaller::Method(name) => {
                     caller.push_str(&self.current_impl.clone().unwrap());
                     caller.push_str("::");
-                    caller.push_str(&name);
+                    caller.push_str(&name.join("::"));
                 }
             },
             None => caller.push_str("NoData"),
@@ -147,11 +147,20 @@ impl Analyzer {
 
         result
     }
+
+    fn path_to_vec(path: &syn::Path) -> Vec<String> {
+        let mut result = Vec::new();
+        for i in path.segments.iter() {
+            result.push(i.ident.to_string());
+        }
+
+        result
+    }
 }
 
 impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
-        self.status.current_function = Some(FunctionOrMethod::Function(node.sig.ident.to_string()));
+        self.status.current_function = Some(KindCaller::Function(vec![node.sig.ident.to_string()]));
         syn::visit::visit_item_fn(self, node);
         self.status.current_function = None;
     }
@@ -167,7 +176,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     }
 
     fn visit_impl_item_method(&mut self, node: &'ast syn::ImplItemMethod) {
-        self.status.current_function = Some(FunctionOrMethod::Method(node.sig.ident.to_string()));
+        self.status.current_function = Some(KindCaller::Method(vec![node.sig.ident.to_string()]));
 
         syn::visit::visit_impl_item_method(self, node);
         self.status.current_function = None;
