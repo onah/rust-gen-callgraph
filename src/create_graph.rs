@@ -1,3 +1,5 @@
+use crate::class_tree;
+
 use super::CallInfo;
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -6,6 +8,7 @@ use std::io::Write;
 type Nd = String;
 type Ed = (String, String);
 
+#[derive(Debug)]
 pub struct GraphData {
     data: HashSet<Ed>,
 }
@@ -13,11 +16,21 @@ pub struct GraphData {
 impl GraphData {
     pub fn new(input: Vec<CallInfo>) -> GraphData {
         let mut data: HashSet<Ed> = HashSet::new();
+        let mut class_tree = class_tree::ClassTree::new();
         for callinfo in input.iter() {
             data.insert((callinfo.caller.clone(), callinfo.callee.clone()));
+
+            let fn_names_caller: Vec<&str> = callinfo.caller.split("::").collect();
+            class_tree.push(&fn_names_caller);
+
+            let fn_names_callee: Vec<&str> = callinfo.callee.split("::").collect();
+            class_tree.push(&fn_names_callee);
         }
 
-        GraphData { data }
+        println!("{:#?}", class_tree);
+
+        let result = GraphData { data };
+        result
     }
 }
 
