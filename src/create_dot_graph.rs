@@ -3,6 +3,7 @@ use super::CallInfo;
 use crate::class_tree::{self, ClassTreeInterface};
 use std::cell::RefCell;
 
+//use std::intrinsics::caller_location;
 use std::io;
 
 struct CreateDotGraph<W> {
@@ -39,11 +40,27 @@ impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
             .unwrap();
 
         // kokode graph wo kaku
+        for callinfo in &*self.callinfos.borrow() {
+            if callinfo
+                .callee
+                .starts_with(&self.current_classname.borrow().name())
+            {
+                if callinfo
+                    .caller
+                    .starts_with(&self.current_classname.borrow().name())
+                {
+                    let callee_name = &callinfo.callee.replace("::", "__");
+                    let caller_name = &callinfo.caller.replace("::", "__");
+                    w.write(format!("{} -> {}\n", callee_name, caller_name).as_bytes())
+                        .unwrap();
+                }
+            }
+        }
 
         *self.cluster_counter.borrow_mut() += 1;
     }
 
-    fn exec_search_after(&self, fn_name: &str) {
+    fn exec_search_after(&self, _fn_name: &str) {
         self.current_classname.borrow_mut().pop().unwrap();
         self.output
             .borrow_mut()
@@ -60,6 +77,8 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
 
     class_tree.search_preorder(&create_dot_graph);
 
+    // koko ni nokori no guraph wo kaku
+
     create_dot_graph.write(format!("}}\n").as_bytes())?;
 
     Ok(())
@@ -68,10 +87,12 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
 fn make_class_tree(callinfo: &Vec<CallInfo>) -> class_tree::ClassTree {
     let class_tree = class_tree::ClassTree::new();
     for c in callinfo.iter() {
-        let fn_names_caller: Vec<&str> = c.caller.split("::").collect();
+        let mut fn_names_caller: Vec<&str> = c.caller.split("::").collect();
+        fn_names_caller.pop().unwrap();
         class_tree.push(&fn_names_caller);
 
-        let fn_names_callee: Vec<&str> = c.callee.split("::").collect();
+        let mut fn_names_callee: Vec<&str> = c.callee.split("::").collect();
+        fn_names_callee.pop().unwrap();
         class_tree.push(&fn_names_callee);
     }
     class_tree
