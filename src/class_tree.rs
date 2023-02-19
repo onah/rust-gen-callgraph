@@ -75,16 +75,16 @@ mod tests {
     use super::*;
 
     struct TestInterface {
-        testStrings: RefCell<Vec<String>>,
+        test_strings: RefCell<Vec<String>>,
     }
     impl ClassTreeInterface for TestInterface {
         fn exec_search_before(&self, fn_name: &str) {
             let s = fn_name.to_string() + "+";
-            self.testStrings.borrow_mut().push(s);
+            self.test_strings.borrow_mut().push(s);
         }
         fn exec_search_after(&self, fn_name: &str) {
             let s = fn_name.to_string() + "-";
-            self.testStrings.borrow_mut().push(s);
+            self.test_strings.borrow_mut().push(s);
         }
     }
     #[test]
@@ -129,14 +129,14 @@ mod tests {
 
         assert_eq!(root, expect_root);
 
-        // search_preorder
+        // Test search_preorder
 
         let test_interface = TestInterface {
-            testStrings: RefCell::new(Vec::new()),
+            test_strings: RefCell::new(Vec::new()),
         };
         root.search_preorder(&test_interface);
 
-        let result = test_interface.testStrings.borrow().join("");
+        let result = test_interface.test_strings.borrow().join("");
         assert_eq!(result, "A+B+C+C-D+D-B-A-")
     }
 }

@@ -1,5 +1,7 @@
 mod analyzer;
+mod class_name;
 mod class_tree;
+mod create_dot_graph;
 mod create_graph;
 
 use std::fs::File;
@@ -39,6 +41,6 @@ pub fn run(input: Vec<PathBuf>) {
     // let mut f = File::create("graph.dot").unwrap();
     // create_graph::render_to(graph, &mut f);
 
-    println!("digraph G {{");
-    println!("}}");
+    let mut f = File::create("graph.dot").unwrap();
+    create_dot_graph::render_to(calls, &mut f).unwrap();
 }

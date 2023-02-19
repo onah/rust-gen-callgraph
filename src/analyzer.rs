@@ -148,6 +148,7 @@ impl Analyzer {
         result
     }
 
+    /*
     fn path_to_vec(path: &syn::Path) -> Vec<String> {
         let mut result = Vec::new();
         for i in path.segments.iter() {
@@ -156,6 +157,7 @@ impl Analyzer {
 
         result
     }
+    */
 }
 
 impl<'ast> syn::visit::Visit<'ast> for Analyzer {
