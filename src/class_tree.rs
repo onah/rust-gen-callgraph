@@ -85,13 +85,15 @@ mod tests {
         test_strings: RefCell<Vec<String>>,
     }
     impl ClassTreeInterface for TestInterface {
-        fn exec_search_before(&self, fn_name: &str) {
+        fn exec_search_before(&self, fn_name: &str) -> bool {
             let s = fn_name.to_string() + "+";
             self.test_strings.borrow_mut().push(s);
+            true
         }
-        fn exec_search_after(&self, fn_name: &str) {
+        fn exec_search_after(&self, fn_name: &str) -> bool {
             let s = fn_name.to_string() + "-";
             self.test_strings.borrow_mut().push(s);
+            true
         }
     }
     #[test]

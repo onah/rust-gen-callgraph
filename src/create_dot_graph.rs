@@ -48,10 +48,7 @@ impl CreateDotGraph {
 
         for callinfo in &*self.callinfos.borrow() {
             if *callinfo.writed.borrow() == false {
-                let callee_name = &callinfo.callinfo.callee.replace(":", "_").replace("-", "_");
-                let caller_name = &callinfo.callinfo.caller.replace(":", "_").replace("-", "_");
-
-                result += &format!("{} -> {}\n", caller_name, callee_name);
+                result += &dot_writer::edge(&callinfo.callinfo.caller, &callinfo.callinfo.callee);
             }
         }
         result
@@ -127,15 +124,15 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     let class_tree = make_class_tree(&callinfos);
     let create_dot_graph = CreateDotGraph::new(callinfos);
 
-    output.write(dot_writer::start().as_bytes())?;
-    output.write(create_dot_graph.write_node_label().as_bytes())?;
+    output.write_all(dot_writer::start().as_bytes())?;
+    output.write_all(create_dot_graph.write_node_label().as_bytes())?;
 
     class_tree.search_preorder(&create_dot_graph);
-    output.write(create_dot_graph.result.borrow().as_bytes())?;
+    output.write_all(create_dot_graph.result.borrow().as_bytes())?;
     create_dot_graph.result.borrow_mut().clear();
 
-    output.write(create_dot_graph.write_callinfo().as_bytes())?;
-    output.write(dot_writer::end().as_bytes())?;
+    output.write_all(create_dot_graph.write_callinfo().as_bytes())?;
+    output.write_all(dot_writer::end().as_bytes())?;
 
     Ok(())
 }
