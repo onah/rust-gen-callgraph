@@ -2,6 +2,7 @@ mod analyzer;
 mod class_name;
 mod class_tree;
 mod create_dot_graph;
+mod dot_creater;
 //mod create_graph;
 
 use std::fs::File;
@@ -21,7 +22,7 @@ pub struct CallInfo {
 }
 */
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct CallInfo {
     callee: String,
     caller: String,
