@@ -55,10 +55,8 @@ impl ClassTree {
     }
 
     pub fn search_preorder(&self, interface: &dyn ClassTreeInterface) -> bool {
-        if self.fn_name != "" {
-            if !interface.exec_search_before(&self.fn_name) {
-                return false;
-            };
+        if !self.fn_name.is_empty() && !interface.exec_search_before(&self.fn_name) {
+            return false;
         }
 
         let nodes = self.nodes.borrow();
@@ -68,10 +66,8 @@ impl ClassTree {
             };
         }
 
-        if self.fn_name != "" {
-            if !interface.exec_search_after(&self.fn_name) {
-                return false;
-            }
+        if !self.fn_name.is_empty() && !interface.exec_search_after(&self.fn_name) {
+            return false;
         }
         true
     }

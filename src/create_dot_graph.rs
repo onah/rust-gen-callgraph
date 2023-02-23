@@ -47,7 +47,7 @@ impl CreateDotGraph {
         let mut result = String::new();
 
         for callinfo in &*self.callinfos.borrow() {
-            if *callinfo.writed.borrow() == false {
+            if !(*callinfo.writed.borrow()) {
                 result += &dot_writer::edge(&callinfo.callinfo.caller, &callinfo.callinfo.callee);
             }
         }
@@ -94,15 +94,13 @@ impl ClassTreeInterface for CreateDotGraph {
                     let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
                     *result += &format!("{}\n", callee_name);
                 }
-            } else {
-                if callinfo
-                    .callinfo
-                    .caller
-                    .starts_with(&self.current_classname.borrow().name())
-                {
-                    let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
-                    *result += &format!("{}\n", caller_name);
-                }
+            } else if callinfo
+                .callinfo
+                .caller
+                .starts_with(&self.current_classname.borrow().name())
+            {
+                let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
+                *result += &format!("{}\n", caller_name);
             }
         }
 

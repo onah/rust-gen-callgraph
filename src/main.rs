@@ -10,7 +10,7 @@ fn get_sourcefile(path: PathBuf) -> Result<Vec<PathBuf>, io::Error> {
     let mut result: Vec<PathBuf> = Vec::new();
 
     let dirfiles = fs::read_dir(path)?;
-    for item in dirfiles.into_iter() {
+    for item in dirfiles {
         let dirfile = item?;
 
         // recursive to directory

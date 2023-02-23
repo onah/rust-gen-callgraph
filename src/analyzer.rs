@@ -7,7 +7,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use syn::visit::Visit;
-use toml;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut analyzer = Analyzer::new();
@@ -200,7 +199,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
                         .status
                         .current_impl
                         .clone()
-                        .unwrap_or(String::from("NonImpl"))),
+                        .unwrap_or_else(|| String::from("NonImpl"))),
                 );
                 method_name.push_str("::");
             }
