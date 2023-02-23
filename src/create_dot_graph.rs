@@ -16,6 +16,7 @@ struct CreateDotGraph<W> {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
     cluster_counter: RefCell<usize>,
     current_classname: RefCell<ClassName>,
+    result: RefCell<String>,
 }
 
 impl<W: io::Write> CreateDotGraph<W> {
@@ -40,6 +41,7 @@ impl<W: io::Write> CreateDotGraph<W> {
             callinfos: RefCell::new(callinfos_with_writed),
             cluster_counter: RefCell::new(0),
             current_classname: RefCell::new(ClassName::new()),
+            result: RefCell::new(String::new()),
         }
     }
 
@@ -76,14 +78,13 @@ impl<W: io::Write> CreateDotGraph<W> {
 }
 
 impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
-    fn exec_search_before(&self, fn_name: &str) {
+    fn exec_search_before(&self, fn_name: &str) -> bool {
         self.current_classname.borrow_mut().push(fn_name);
 
-        let mut w = self.output.borrow_mut();
-        w.write(format!("subgraph cluster_{} {{\n", self.cluster_counter.borrow()).as_bytes())
-            .unwrap();
-        w.write(format!("label=\"{}\"\n", self.current_classname.borrow().name()).as_bytes())
-            .unwrap();
+        let mut result = self.result.borrow_mut();
+
+        *result += &format!("subgraph cluster_{} {{\n", self.cluster_counter.borrow());
+        *result += &format!("label=\"{}\"\n", self.current_classname.borrow().name());
 
         for callinfo in &*self.callinfos.borrow() {
             if callinfo
@@ -98,13 +99,12 @@ impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
                 {
                     *callinfo.writed.borrow_mut() = true;
 
-                    let callee_name = &callinfo.callinfo.callee.replace(":", "_").replace("-", "_");
-                    let caller_name = &callinfo.callinfo.caller.replace(":", "_").replace("-", "_");
-                    w.write(format!("{} -> {}\n", caller_name, callee_name).as_bytes())
-                        .unwrap();
+                    let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
+                    let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
+                    *result += &format!("{} -> {}\n", caller_name, callee_name);
                 } else {
-                    let callee_name = &callinfo.callinfo.callee.replace(":", "_").replace("-", "_");
-                    w.write(format!("{}\n", callee_name).as_bytes()).unwrap();
+                    let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
+                    *result += &format!("{}\n", callee_name);
                 }
             } else {
                 if callinfo
@@ -112,21 +112,23 @@ impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
                     .caller
                     .starts_with(&self.current_classname.borrow().name())
                 {
-                    let caller_name = &callinfo.callinfo.caller.replace(":", "_").replace("-", "_");
-                    w.write(format!("{}\n", caller_name).as_bytes()).unwrap();
+                    let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
+                    *result += &format!("{}\n", caller_name);
                 }
             }
         }
 
         *self.cluster_counter.borrow_mut() += 1;
+        true
     }
 
-    fn exec_search_after(&self, _fn_name: &str) {
+    fn exec_search_after(&self, _fn_name: &str) -> bool {
         self.current_classname.borrow_mut().pop().unwrap();
-        self.output
-            .borrow_mut()
-            .write(format!("}}\n").as_bytes())
-            .unwrap();
+
+        let mut result = self.result.borrow_mut();
+        *result += "}\n";
+
+        true
     }
 }
 
@@ -137,13 +139,16 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     create_dot_graph.write(dot_creater::start().as_bytes())?;
     create_dot_graph.write_node_label();
     class_tree.search_preorder(&create_dot_graph);
+    create_dot_graph.write(create_dot_graph.result.borrow().as_bytes())?;
+    create_dot_graph.result.borrow_mut().clear();
+
     create_dot_graph.write_callinfo();
     create_dot_graph.write(dot_creater::end().as_bytes())?;
 
     Ok(())
 }
 
-fn make_class_tree(callinfo: &Vec<CallInfo>) -> class_tree::ClassTree {
+fn make_class_tree(callinfo: &[CallInfo]) -> class_tree::ClassTree {
     let class_tree = class_tree::ClassTree::new();
     for c in callinfo.iter() {
         let mut fn_names_caller: Vec<&str> = c.caller.split("::").collect();

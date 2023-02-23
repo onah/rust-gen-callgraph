@@ -7,6 +7,6 @@ pub fn end() -> String {
 }
 
 pub fn node(name: &str) -> String {
-    let id = name.replace(":", "_").replace("-", "_");
+    let id = name.replace([':', '-'], "_");
     format!("{} [label=\"{}\"]\n", id, name)
 }

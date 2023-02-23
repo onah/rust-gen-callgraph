@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 
 pub trait ClassTreeInterface {
-    fn exec_search_before(&self, fn_name: &str);
-    fn exec_search_after(&self, fn_name: &str);
+    fn exec_search_before(&self, fn_name: &str) -> bool;
+    fn exec_search_after(&self, fn_name: &str) -> bool;
 }
 
 #[derive(Debug, PartialEq)]
@@ -54,19 +54,26 @@ impl ClassTree {
         self.nodes.borrow_mut().push(new_node);
     }
 
-    pub fn search_preorder(&self, interface: &dyn ClassTreeInterface) {
+    pub fn search_preorder(&self, interface: &dyn ClassTreeInterface) -> bool {
         if self.fn_name != "" {
-            interface.exec_search_before(&self.fn_name);
+            if !interface.exec_search_before(&self.fn_name) {
+                return false;
+            };
         }
 
         let nodes = self.nodes.borrow();
         for node in &*nodes {
-            node.search_preorder(interface);
+            if !node.search_preorder(interface) {
+                return false;
+            };
         }
 
         if self.fn_name != "" {
-            interface.exec_search_after(&self.fn_name);
+            if !interface.exec_search_after(&self.fn_name) {
+                return false;
+            }
         }
+        true
     }
 }
 
