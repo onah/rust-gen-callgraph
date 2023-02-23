@@ -1,8 +1,8 @@
 use super::class_name::ClassName;
 use super::CallInfo;
 use crate::class_tree::{self, ClassTreeInterface};
-use crate::dot_creater;
-//use dot_creater;
+use crate::dot_writer;
+//use dot_writer;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::io;
@@ -11,16 +11,15 @@ struct CallInfoWithWrited {
     callinfo: CallInfo,
     writed: RefCell<bool>,
 }
-struct CreateDotGraph<W> {
-    output: RefCell<W>,
+struct CreateDotGraph {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
     cluster_counter: RefCell<usize>,
     current_classname: RefCell<ClassName>,
     result: RefCell<String>,
 }
 
-impl<W: io::Write> CreateDotGraph<W> {
-    pub fn new(output: W, callinfos: Vec<CallInfo>) -> CreateDotGraph<W> {
+impl CreateDotGraph {
+    pub fn new(callinfos: Vec<CallInfo>) -> CreateDotGraph {
         let mut callinfos_with_writed: Vec<CallInfoWithWrited> = Vec::new();
 
         // remove duplicates
@@ -37,7 +36,6 @@ impl<W: io::Write> CreateDotGraph<W> {
             callinfos_with_writed.push(cww);
         }
         CreateDotGraph {
-            output: RefCell::new(output),
             callinfos: RefCell::new(callinfos_with_writed),
             cluster_counter: RefCell::new(0),
             current_classname: RefCell::new(ClassName::new()),
@@ -45,39 +43,32 @@ impl<W: io::Write> CreateDotGraph<W> {
         }
     }
 
-    pub fn write_callinfo(&self) {
+    pub fn write_callinfo(&self) -> String {
+        let mut result = String::new();
+
         for callinfo in &*self.callinfos.borrow() {
             if *callinfo.writed.borrow() == false {
                 let callee_name = &callinfo.callinfo.callee.replace(":", "_").replace("-", "_");
                 let caller_name = &callinfo.callinfo.caller.replace(":", "_").replace("-", "_");
 
-                self.output
-                    .borrow_mut()
-                    .write(format!("{} -> {}\n", caller_name, callee_name).as_bytes())
-                    .unwrap();
+                result += &format!("{} -> {}\n", caller_name, callee_name);
             }
         }
+        result
     }
 
-    pub fn write_node_label(&self) {
+    pub fn write_node_label(&self) -> String {
+        let mut result = String::new();
+
         for callinfo in &*self.callinfos.borrow() {
-            let mut output = self.output.borrow_mut();
-            output
-                .write(dot_creater::node(&callinfo.callinfo.callee).as_bytes())
-                .unwrap();
-            output
-                .write(dot_creater::node(&callinfo.callinfo.caller).as_bytes())
-                .unwrap();
+            result += &dot_writer::node(&callinfo.callinfo.callee);
+            result += &dot_writer::node(&callinfo.callinfo.caller);
         }
-    }
-
-    pub fn write(&self, buf: &[u8]) -> io::Result<()> {
-        self.output.borrow_mut().write(buf)?;
-        Ok(())
+        result
     }
 }
 
-impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
+impl ClassTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         self.current_classname.borrow_mut().push(fn_name);
 
@@ -134,16 +125,17 @@ impl<W: io::Write> ClassTreeInterface for CreateDotGraph<W> {
 
 pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
     let class_tree = make_class_tree(&callinfos);
-    let create_dot_graph = CreateDotGraph::new(output, callinfos);
+    let create_dot_graph = CreateDotGraph::new(callinfos);
 
-    create_dot_graph.write(dot_creater::start().as_bytes())?;
-    create_dot_graph.write_node_label();
+    output.write(dot_writer::start().as_bytes())?;
+    output.write(create_dot_graph.write_node_label().as_bytes())?;
+
     class_tree.search_preorder(&create_dot_graph);
-    create_dot_graph.write(create_dot_graph.result.borrow().as_bytes())?;
+    output.write(create_dot_graph.result.borrow().as_bytes())?;
     create_dot_graph.result.borrow_mut().clear();
 
-    create_dot_graph.write_callinfo();
-    create_dot_graph.write(dot_creater::end().as_bytes())?;
+    output.write(create_dot_graph.write_callinfo().as_bytes())?;
+    output.write(dot_writer::end().as_bytes())?;
 
     Ok(())
 }

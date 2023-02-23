@@ -2,7 +2,7 @@ mod analyzer;
 mod class_name;
 mod class_tree;
 mod create_dot_graph;
-mod dot_creater;
+mod dot_writer;
 //mod create_graph;
 
 use std::fs::File;
