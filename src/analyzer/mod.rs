@@ -1,4 +1,5 @@
 extern crate syn;
+mod name_resolver;
 
 use super::CallInfo;
 use std::error;

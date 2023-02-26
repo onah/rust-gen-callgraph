@@ -3,6 +3,7 @@ mod class_name;
 mod class_tree;
 mod create_dot_graph;
 mod dot_writer;
+//mod name_resolver;
 //mod create_graph;
 
 use std::fs::File;
