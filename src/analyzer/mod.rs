@@ -2,12 +2,16 @@ extern crate syn;
 mod name_resolver;
 
 use super::CallInfo;
+use name_resolver::VariableDefine;
 use std::error;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use syn::visit::Visit;
+
+// TODO: test code wo kaiseki sinai
+// TODO: mod wo module mei ni okikaeru
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut analyzer = Analyzer::new();
@@ -111,14 +115,19 @@ impl FnInfo {
 struct Analyzer {
     calls: Vec<CallInfo>,
     status: FnInfo,
+    local_variables: Vec<VariableDefine>,
 }
 
 impl Analyzer {
     pub fn new() -> Analyzer {
         let calls: Vec<CallInfo> = Vec::new();
         let status = FnInfo::new();
-
-        Analyzer { calls, status }
+        let local_variables: Vec<VariableDefine> = Vec::new();
+        Analyzer {
+            calls,
+            status,
+            local_variables,
+        }
     }
 
     fn push_callinfo(&mut self, callee: String) {
@@ -129,6 +138,7 @@ impl Analyzer {
         self.calls.push(callinfo);
     }
 
+    /*
     fn punctuated_to_string(
         &self,
         punctuated: &syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
@@ -148,7 +158,6 @@ impl Analyzer {
         result
     }
 
-    /*
     fn path_to_vec(path: &syn::Path) -> Vec<String> {
         let mut result = Vec::new();
         for i in path.segments.iter() {
@@ -160,6 +169,25 @@ impl Analyzer {
     */
 }
 
+fn punctuated_to_string(
+    punctuated: &syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
+) -> String {
+    let mut iter = punctuated.iter();
+
+    let first = match iter.next() {
+        Some(first) => first,
+        None => return "".to_string(),
+    };
+
+    let mut result = first.ident.to_string();
+    for i in iter {
+        result += "::";
+        result += &i.ident.to_string();
+    }
+
+    result
+}
+
 impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
         self.status.current_function = Some(KindCaller::Function(vec![node.sig.ident.to_string()]));
@@ -169,7 +197,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         if let syn::Type::Path(type_path) = &*node.self_ty {
-            self.status.current_impl = Some(self.punctuated_to_string(&type_path.path.segments));
+            self.status.current_impl = Some(punctuated_to_string(&type_path.path.segments));
         }
 
         syn::visit::visit_item_impl(self, node);
@@ -186,7 +214,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
         if let syn::Expr::Path(expr_path) = &*node.func {
-            self.push_callinfo(self.punctuated_to_string(&expr_path.path.segments));
+            self.push_callinfo(punctuated_to_string(&expr_path.path.segments));
         }
         syn::visit::visit_expr_call(self, node);
     }
@@ -194,7 +222,8 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
         let mut method_name = String::new();
         if let syn::Expr::Path(expr_path) = &*node.receiver {
-            if "self" == self.punctuated_to_string(&expr_path.path.segments) {
+            let receiver_name = punctuated_to_string(&expr_path.path.segments);
+            if "self" == receiver_name {
                 method_name.push_str(
                     &(self
                         .status
@@ -203,6 +232,14 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
                         .unwrap_or_else(|| String::from("NonImpl"))),
                 );
                 method_name.push_str("::");
+            } else {
+                for v in &self.local_variables {
+                    if v.same_name(&receiver_name) {
+                        let name = v.variable_type().unwrap_or_else(|| String::from("None"));
+                        method_name.push_str(&name);
+                        // TODO: wakarana kereba hyouji push sinai youni suru
+                    }
+                }
             }
         }
 
@@ -210,5 +247,24 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
         self.push_callinfo(method_name);
 
         syn::visit::visit_expr_method_call(self, node);
+    }
+
+    // visit_local
+    // local hensu wo kioku site, method call no toki yobidashi moto wo siraberu
+    // TODO: kansu owattara clear sinaito ikenai
+    fn visit_local(&mut self, node: &'ast syn::Local) {
+        if let syn::Pat::Type(pat_type) = &node.pat {
+            if let syn::Pat::Ident(ident) = &*pat_type.pat {
+                let name = (&ident).ident.to_string();
+                let mut variable_type = None;
+
+                if let syn::Type::Path(ty) = &*pat_type.ty {
+                    variable_type = Some(punctuated_to_string(&ty.path.segments));
+                }
+
+                let var = VariableDefine::new(name, variable_type);
+                self.local_variables.push(var);
+            }
+        }
     }
 }
