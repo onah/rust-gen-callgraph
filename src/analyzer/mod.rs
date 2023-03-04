@@ -10,8 +10,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use syn::visit::Visit;
 
-// TODO: test code wo kaiseki sinai
-// TODO: mod wo module mei ni okikaeru
+// TODO: mod.rs wo module mei ni okikaeru
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut analyzer = Analyzer::new();
@@ -189,6 +188,20 @@ fn punctuated_to_string(
 }
 
 impl<'ast> syn::visit::Visit<'ast> for Analyzer {
+    fn visit_item_mod(&mut self, node: &'ast syn::ItemMod) {
+        // don't analyze test code
+        for attr in &node.attrs {
+            let path_name = match attr.path.get_ident() {
+                Some(n) => n.to_string(),
+                None => "".to_string(),
+            };
+            if path_name == "cfg" && attr.tokens.to_string() == "(test)" {
+                return;
+            }
+        }
+        syn::visit::visit_item_mod(self, node);
+    }
+
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
         self.status.current_function = Some(KindCaller::Function(vec![node.sig.ident.to_string()]));
         syn::visit::visit_item_fn(self, node);
