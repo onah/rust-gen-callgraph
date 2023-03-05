@@ -13,7 +13,7 @@ use syn::visit::Visit;
 // TODO: mod.rs wo module mei ni okikaeru
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-    let mut analyzer = Analyzer::new();
+    let mut analyzer = Analyzer::new(filename.clone())?;
 
     let mut file = File::open(&filename)?;
     let mut src = String::new();
@@ -48,15 +48,18 @@ impl FnInfo {
         }
     }
 
-    pub fn get_caller_name(&self) -> String {
+    pub fn get_caller_name(&self, module_name: &str) -> String {
         let mut caller = String::new();
 
         match &self.current_function {
             Some(func) => match func {
                 KindCaller::Function(name) => {
+                    caller.push_str(module_name);
+                    /*
                     caller.push_str(&FnInfo::filename_to_modulename(
                         &self.filename.clone().unwrap(),
                     ));
+                      */
                     caller.push_str("::");
                     caller.push_str(&name.join("::"));
                 }
@@ -70,49 +73,10 @@ impl FnInfo {
         }
         caller
     }
-
-    fn filename_to_modulename(filename: &PathBuf) -> String {
-        let result;
-
-        if filename == OsStr::new("./src/lib.rs") {
-            let mut f = File::open("Cargo.toml").unwrap();
-            let mut contents = String::new();
-            f.read_to_string(&mut contents).unwrap();
-
-            let values = contents.parse::<toml::Value>().unwrap();
-            let project_name = values["package"]["name"].as_str().unwrap();
-
-            result = String::from(project_name);
-        } else if filename.file_name().unwrap() == OsStr::new("lib.rs") {
-            let mut filename2 = filename.clone();
-            filename2.pop();
-            if filename2.file_name().unwrap() == OsStr::new("src") {
-                filename2.pop();
-                {
-                    // TODO Copy Code Refactoring
-                    let mut f =
-                        File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap())).unwrap();
-                    let mut contents = String::new();
-                    f.read_to_string(&mut contents).unwrap();
-
-                    let values = contents.parse::<toml::Value>().unwrap();
-                    let project_name = values["package"]["name"].as_str().unwrap();
-
-                    result = String::from(project_name);
-                }
-            } else {
-                result = filename2.file_stem().unwrap().to_str().unwrap().to_string();
-            }
-        } else {
-            result = filename.file_stem().unwrap().to_str().unwrap().to_string();
-        }
-
-        result
-    }
 }
 
 struct FileInfo {
-    file_name: PathBuf,
+    //file_name: PathBuf,
     module_name: String,
 }
 
@@ -121,7 +85,7 @@ impl FileInfo {
         let module_name = FileInfo::get_module_name(&file_name)?;
 
         let file_info = FileInfo {
-            file_name,
+            //file_name,
             module_name,
         };
         Ok(file_info)
@@ -145,12 +109,11 @@ impl FileInfo {
                 filename2.pop();
                 {
                     // TODO Copy Code Refactoring
-                    let mut f =
-                        File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap())).unwrap();
+                    let mut f = File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap()))?;
                     let mut contents = String::new();
-                    f.read_to_string(&mut contents).unwrap();
+                    f.read_to_string(&mut contents)?;
 
-                    let values = contents.parse::<toml::Value>().unwrap();
+                    let values = contents.parse::<toml::Value>()?;
                     let project_name = values["package"]["name"].as_str().unwrap();
 
                     result = String::from(project_name);
@@ -164,29 +127,36 @@ impl FileInfo {
 
         Ok(result)
     }
+
+    pub fn module_name(&self) -> &str {
+        &self.module_name
+    }
 }
 struct Analyzer {
     calls: Vec<CallInfo>,
     status: FnInfo,
     local_variables: Vec<VariableDefine>,
+    file_info: FileInfo,
 }
 
 impl Analyzer {
-    pub fn new() -> Analyzer {
+    pub fn new(file_name: PathBuf) -> Result<Analyzer, Box<dyn error::Error>> {
         let calls: Vec<CallInfo> = Vec::new();
         let status = FnInfo::new();
         let local_variables: Vec<VariableDefine> = Vec::new();
-        Analyzer {
+        let file_info: FileInfo = FileInfo::new(file_name)?;
+        Ok(Analyzer {
             calls,
             status,
             local_variables,
-        }
+            file_info,
+        })
     }
 
     fn push_callinfo(&mut self, callee: String) {
         let callinfo = CallInfo {
             callee,
-            caller: self.status.get_caller_name(),
+            caller: self.status.get_caller_name(self.file_info.module_name()),
         };
         self.calls.push(callinfo);
     }
