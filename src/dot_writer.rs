@@ -1,9 +1,9 @@
 pub fn start() -> String {
-    String::from("digraph G {{\n")
+    String::from("digraph G {\n rankdir=LR;\n")
 }
 
 pub fn end() -> String {
-    String::from("}}\n")
+    String::from("}\n")
 }
 
 pub fn node(name: &str) -> String {

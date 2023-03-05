@@ -55,11 +55,6 @@ impl FnInfo {
             Some(func) => match func {
                 KindCaller::Function(name) => {
                     caller.push_str(module_name);
-                    /*
-                    caller.push_str(&FnInfo::filename_to_modulename(
-                        &self.filename.clone().unwrap(),
-                    ));
-                      */
                     caller.push_str("::");
                     caller.push_str(&name.join("::"));
                 }
@@ -200,6 +195,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
         self.status.current_function = Some(KindCaller::Function(vec![node.sig.ident.to_string()]));
         syn::visit::visit_item_fn(self, node);
         self.status.current_function = None;
+        self.local_variables.clear();
     }
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
@@ -244,7 +240,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
                     if v.same_name(&receiver_name) {
                         let name = v.variable_type().unwrap_or_else(|| String::from("None"));
                         method_name.push_str(&name);
-                        // TODO: wakarana kereba hyouji push sinai youni suru
+                        method_name.push_str("::");
                     }
                 }
             }
@@ -268,6 +264,8 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
                 if let syn::Type::Path(ty) = &*pat_type.ty {
                     variable_type = Some(punctuated_to_string(&ty.path.segments));
                 }
+
+                //println!("{} {}", name, variable_type.clone().unwrap());
 
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);

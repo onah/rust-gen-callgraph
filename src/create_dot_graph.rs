@@ -18,6 +18,9 @@ struct CreateDotGraph {
     result: RefCell<String>,
 }
 
+// TODO: subgraph chuu ha class mei ha iranai
+// TODO: std api ha hyouji sinai (ex. Vec, Hashset, etc)
+
 impl CreateDotGraph {
     pub fn new(callinfos: Vec<CallInfo>) -> CreateDotGraph {
         let mut callinfos_with_writed: Vec<CallInfoWithWrited> = Vec::new();
@@ -29,11 +32,14 @@ impl CreateDotGraph {
         }
 
         for c in callinfos_no_dup {
-            let cww = CallInfoWithWrited {
-                callinfo: c,
-                writed: RefCell::new(false),
-            };
-            callinfos_with_writed.push(cww);
+            // TODO: zantei teki ni class ga nai mono (:: ga nai mono) ha nozoku
+            if c.callee.contains("::") && c.caller.contains("::") {
+                let cww = CallInfoWithWrited {
+                    callinfo: c,
+                    writed: RefCell::new(false),
+                };
+                callinfos_with_writed.push(cww);
+            }
         }
         CreateDotGraph {
             callinfos: RefCell::new(callinfos_with_writed),
