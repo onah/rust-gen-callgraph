@@ -111,6 +111,60 @@ impl FnInfo {
     }
 }
 
+struct FileInfo {
+    file_name: PathBuf,
+    module_name: String,
+}
+
+impl FileInfo {
+    pub fn new(file_name: PathBuf) -> Result<FileInfo, Box<dyn error::Error>> {
+        let module_name = FileInfo::get_module_name(&file_name)?;
+
+        let file_info = FileInfo {
+            file_name,
+            module_name,
+        };
+        Ok(file_info)
+    }
+
+    fn get_module_name(file_name: &PathBuf) -> Result<String, Box<dyn error::Error>> {
+        let result;
+
+        if file_name == OsStr::new("./src/lib.rs") {
+            let mut f = File::open("Cargo.toml")?;
+            let mut contents = String::new();
+            f.read_to_string(&mut contents)?;
+
+            let values = contents.parse::<toml::Value>()?;
+            let project_name = values["package"]["name"].as_str().unwrap_or_else(|| "");
+            result = String::from(project_name);
+        } else if file_name.file_name().unwrap_or_else(|| OsStr::new("")) == OsStr::new("lib.rs") {
+            let mut filename2 = file_name.clone();
+            filename2.pop();
+            if filename2.file_name().unwrap() == OsStr::new("src") {
+                filename2.pop();
+                {
+                    // TODO Copy Code Refactoring
+                    let mut f =
+                        File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap())).unwrap();
+                    let mut contents = String::new();
+                    f.read_to_string(&mut contents).unwrap();
+
+                    let values = contents.parse::<toml::Value>().unwrap();
+                    let project_name = values["package"]["name"].as_str().unwrap();
+
+                    result = String::from(project_name);
+                }
+            } else {
+                result = filename2.file_stem().unwrap().to_str().unwrap().to_string();
+            }
+        } else {
+            result = file_name.file_stem().unwrap().to_str().unwrap().to_string();
+        }
+
+        Ok(result)
+    }
+}
 struct Analyzer {
     calls: Vec<CallInfo>,
     status: FnInfo,
@@ -136,36 +190,6 @@ impl Analyzer {
         };
         self.calls.push(callinfo);
     }
-
-    /*
-    fn punctuated_to_string(
-        &self,
-        punctuated: &syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
-    ) -> String {
-        let mut result = String::new();
-
-        // TODO: other implementation ?
-
-        for i in punctuated.iter() {
-            result = result + &i.ident.to_string() + "::";
-        }
-
-        // Delete last "::"
-        result.pop();
-        result.pop();
-
-        result
-    }
-
-    fn path_to_vec(path: &syn::Path) -> Vec<String> {
-        let mut result = Vec::new();
-        for i in path.segments.iter() {
-            result.push(i.ident.to_string());
-        }
-
-        result
-    }
-    */
 }
 
 fn punctuated_to_string(
