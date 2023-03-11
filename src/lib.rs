@@ -6,7 +6,8 @@ mod dot_writer;
 //mod name_resolver;
 //mod create_graph;
 
-use std::fs::File;
+//use std::fs::File;
+use std::io;
 use std::path::PathBuf;
 
 /*
@@ -43,6 +44,8 @@ pub fn run(input: Vec<PathBuf>) {
     // let mut f = File::create("graph.dot").unwrap();
     // create_graph::render_to(graph, &mut f);
 
-    let mut f = File::create("graph.dot").unwrap();
+    //let mut f = File::create("graph.dot").unwrap();
+    let mut f = io::BufWriter::new(io::stdout());
+
     create_dot_graph::render_to(calls, &mut f).unwrap();
 }

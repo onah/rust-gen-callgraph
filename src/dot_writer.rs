@@ -8,7 +8,9 @@ pub fn end() -> String {
 
 pub fn node(name: &str) -> String {
     let id = escape_for_id(name);
-    format!("{} [label=\"{}\"]\n", id, name)
+    let binding: Vec<&str> = name.split("::").collect();
+    let label = binding.last().unwrap_or(&"");
+    format!("{} [label=\"{}\"]\n", id, label)
 }
 
 pub fn edge(source: &str, dest: &str) -> String {
