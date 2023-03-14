@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq)]
 pub struct ClassName {
     names: Vec<String>,
 }
@@ -5,6 +6,11 @@ pub struct ClassName {
 impl ClassName {
     pub fn new() -> ClassName {
         ClassName { names: Vec::new() }
+    }
+
+    pub fn new_for_str(name: &str) -> ClassName {
+        let names: Vec<String> = name.split("::").map(|x| x.to_string()).collect();
+        ClassName { names }
     }
 
     pub fn name(&self) -> String {
@@ -30,6 +36,19 @@ mod tests {
         c.push("aaa");
         assert_eq!(c.name(), "aaa");
     }
+
+    #[test]
+    fn sinple_new_for_str() {
+        let c = ClassName::new_for_str("String");
+        assert_eq!(c.name(), "String");
+    }
+
+    #[test]
+    fn multi_new_for_str() {
+        let c = ClassName::new_for_str("Foo::Bar");
+        assert_eq!(c.name(), "Foo::Bar");
+    }
+
     #[test]
     fn test_push_double() {
         let mut c = ClassName::new();

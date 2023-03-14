@@ -1,5 +1,8 @@
 extern crate syn;
+mod function;
 mod name_resolver;
+
+use self::function::AnalyzerFunction;
 
 use super::CallInfo;
 use name_resolver::VariableDefine;
@@ -14,10 +17,15 @@ use syn::visit::Visit;
 
 pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
     let mut analyzer = Analyzer::new(filename.clone())?;
+    let mut analyzer_funtions = AnalyzerFunction::new();
 
     let mut file = File::open(&filename)?;
     let mut src = String::new();
     file.read_to_string(&mut src)?;
+
+    let hoge = syn::parse_file(&src)?;
+    analyzer_funtions.visit_file(&hoge);
+    //println!("{:#?}", analyzer_funtions);
 
     let syntax = syn::parse_file(&src)?;
 
@@ -65,7 +73,7 @@ impl FnInfo {
                 }
             },
             None => caller.push_str("NoData"),
-        }
+        }   
         caller
     }
 }
@@ -252,10 +260,11 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
         syn::visit::visit_expr_method_call(self, node);
     }
 
-    // visit_local
-    // local hensu wo kioku site, method call no toki yobidashi moto wo siraberu
-    // TODO: kansu owattara clear sinaito ikenai
+    // syn::Local
+    //   (enum)pat - ident -> name
     fn visit_local(&mut self, node: &'ast syn::Local) {
+        // for explicit_declaration
+        // ex. let var: Vec<String> = Vec::new()
         if let syn::Pat::Type(pat_type) = &node.pat {
             if let syn::Pat::Ident(ident) = &*pat_type.pat {
                 let name = (&ident).ident.to_string();
@@ -267,6 +276,16 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
                 //println!("{} {}", name, variable_type.clone().unwrap());
 
+                let var = VariableDefine::new(name, variable_type);
+                self.local_variables.push(var);
+            }
+        } else if let syn::Pat::Ident(pat_ident) = &node.pat {
+            let name = pat_ident.ident.to_string();
+            let mut variable_type = None;
+            if let Some(val) = &node.init {
+                if let syn::Expr::Path(expr_path) = &*val.1 {
+                    variable_type = Some(expr_path.path.get_ident().unwrap().to_string());
+                }
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);
             }

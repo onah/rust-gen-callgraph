@@ -1,5 +1,6 @@
 pub struct VariableDefine {
     name: String,
+    // TODO: Option ha huyou ??
     variable_type: Option<String>,
 }
 
