@@ -1,5 +1,5 @@
 use crate::class_name::ClassName;
-use syn::{self, token::Return};
+use syn;
 
 pub struct ClassInfo {
     current_class: Option<String>,

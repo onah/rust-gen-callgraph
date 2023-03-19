@@ -1,6 +1,7 @@
 extern crate syn;
 mod function;
 mod name_resolver;
+mod parser_syn;
 
 use self::function::AnalyzerFunction;
 
@@ -73,7 +74,7 @@ impl FnInfo {
                 }
             },
             None => caller.push_str("NoData"),
-        }   
+        }
         caller
     }
 }
@@ -225,6 +226,12 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
         if let syn::Expr::Path(expr_path) = &*node.func {
+            let tmp = match expr_path.path.get_ident() {
+                Some(x) => x.to_string(),
+                None => "".to_string(),
+            };
+            println!("{}", tmp);
+
             self.push_callinfo(punctuated_to_string(&expr_path.path.segments));
         }
         syn::visit::visit_expr_call(self, node);
