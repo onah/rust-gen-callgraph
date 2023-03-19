@@ -1,8 +1,8 @@
 mod analyzer;
 mod create_dot_graph;
 mod dot_writer;
+mod module_tree;
 mod struct_name;
-mod struct_tree;
 
 use std::io;
 use std::path::PathBuf;

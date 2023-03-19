@@ -1,31 +1,31 @@
 use std::cell::RefCell;
 
-pub trait StructTreeInterface {
+pub trait ModuleTreeInterface {
     fn exec_search_before(&self, fn_name: &str) -> bool;
     fn exec_search_after(&self, fn_name: &str) -> bool;
 }
 
 #[derive(Debug, PartialEq)]
-pub struct StructTree {
+pub struct ModuleTree {
     // If fn_name is "", this instance is root node.
     fn_name: String,
-    nodes: RefCell<Vec<StructTree>>,
+    nodes: RefCell<Vec<ModuleTree>>,
 }
 
-impl StructTree {
-    pub fn new() -> StructTree {
-        StructTree::create_root_node()
+impl ModuleTree {
+    pub fn new() -> ModuleTree {
+        ModuleTree::create_root_node()
     }
 
-    fn create_root_node() -> StructTree {
-        StructTree {
+    fn create_root_node() -> ModuleTree {
+        ModuleTree {
             fn_name: "".to_string(),
             nodes: RefCell::new(Vec::new()),
         }
     }
 
-    fn create_node(fn_name: &str) -> StructTree {
-        StructTree {
+    fn create_node(fn_name: &str) -> ModuleTree {
+        ModuleTree {
             fn_name: fn_name.to_string(),
             nodes: RefCell::new(Vec::new()),
         }
@@ -49,12 +49,12 @@ impl StructTree {
             }
         }
 
-        let new_node = StructTree::create_node(function_names[0]);
+        let new_node = ModuleTree::create_node(function_names[0]);
         new_node.push(&function_names[1..]);
         self.nodes.borrow_mut().push(new_node);
     }
 
-    pub fn search_preorder(&self, interface: &dyn StructTreeInterface) -> bool {
+    pub fn search_preorder(&self, interface: &dyn ModuleTreeInterface) -> bool {
         if !self.fn_name.is_empty() && !interface.exec_search_before(&self.fn_name) {
             return false;
         }
@@ -80,7 +80,7 @@ mod tests {
     struct TestInterface {
         test_strings: RefCell<Vec<String>>,
     }
-    impl StructTreeInterface for TestInterface {
+    impl ModuleTreeInterface for TestInterface {
         fn exec_search_before(&self, fn_name: &str) -> bool {
             let s = fn_name.to_string() + "+";
             self.test_strings.borrow_mut().push(s);
@@ -97,7 +97,7 @@ mod tests {
         let funcs = "A::B::C".to_string();
         let vs: Vec<&str> = funcs.split("::").collect();
 
-        let root = StructTree::new();
+        let root = ModuleTree::new();
 
         root.push(&vs);
 
@@ -107,27 +107,27 @@ mod tests {
         root.push(&vs);
 
         // expect
-        let c = StructTree {
+        let c = ModuleTree {
             fn_name: "C".to_string(),
             nodes: RefCell::new(Vec::new()),
         };
 
-        let d = StructTree {
+        let d = ModuleTree {
             fn_name: "D".to_string(),
             nodes: RefCell::new(Vec::new()),
         };
 
-        let b = StructTree {
+        let b = ModuleTree {
             fn_name: "B".to_string(),
             nodes: RefCell::new(vec![c, d]),
         };
 
-        let a = StructTree {
+        let a = ModuleTree {
             fn_name: "A".to_string(),
             nodes: RefCell::new(vec![b]),
         };
 
-        let expect_root = StructTree {
+        let expect_root = ModuleTree {
             fn_name: "".to_string(),
             nodes: RefCell::new(vec![a]),
         };

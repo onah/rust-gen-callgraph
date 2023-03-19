@@ -1,7 +1,7 @@
 use super::struct_name::StructName;
 use super::CallInfo;
 use crate::dot_writer;
-use crate::struct_tree::{StructTree, StructTreeInterface};
+use crate::module_tree::{ModuleTree, ModuleTreeInterface};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::io;
@@ -70,7 +70,7 @@ impl CreateDotGraph {
     }
 }
 
-impl StructTreeInterface for CreateDotGraph {
+impl ModuleTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         self.current_classname.borrow_mut().push(fn_name);
 
@@ -124,7 +124,7 @@ impl StructTreeInterface for CreateDotGraph {
 }
 
 pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
-    let class_tree = make_class_tree(&callinfos);
+    let class_tree = make_module_tree(&callinfos);
     let create_dot_graph = CreateDotGraph::new(callinfos);
 
     output.write_all(dot_writer::start().as_bytes())?;
@@ -140,16 +140,16 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     Ok(())
 }
 
-fn make_class_tree(callinfo: &[CallInfo]) -> StructTree {
-    let class_tree = StructTree::new();
+fn make_module_tree(callinfo: &[CallInfo]) -> ModuleTree {
+    let module_tree = ModuleTree::new();
     for c in callinfo.iter() {
         let mut fn_names_caller: Vec<&str> = c.caller.split("::").collect();
         fn_names_caller.pop().unwrap();
-        class_tree.push(&fn_names_caller);
+        module_tree.push(&fn_names_caller);
 
         let mut fn_names_callee: Vec<&str> = c.callee.split("::").collect();
         fn_names_callee.pop().unwrap();
-        class_tree.push(&fn_names_callee);
+        module_tree.push(&fn_names_callee);
     }
-    class_tree
+    module_tree
 }
