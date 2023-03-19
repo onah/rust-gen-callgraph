@@ -1,8 +1,7 @@
-use super::class_name::ClassName;
+use super::struct_name::StructName;
 use super::CallInfo;
-use crate::class_tree::{self, ClassTreeInterface};
 use crate::dot_writer;
-//use dot_writer;
+use crate::struct_tree::{StructTree, StructTreeInterface};
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::io;
@@ -14,7 +13,7 @@ struct CallInfoWithWrited {
 struct CreateDotGraph {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
     cluster_counter: RefCell<usize>,
-    current_classname: RefCell<ClassName>,
+    current_classname: RefCell<StructName>,
     result: RefCell<String>,
 }
 
@@ -44,7 +43,7 @@ impl CreateDotGraph {
         CreateDotGraph {
             callinfos: RefCell::new(callinfos_with_writed),
             cluster_counter: RefCell::new(0),
-            current_classname: RefCell::new(ClassName::new()),
+            current_classname: RefCell::new(StructName::new()),
             result: RefCell::new(String::new()),
         }
     }
@@ -71,7 +70,7 @@ impl CreateDotGraph {
     }
 }
 
-impl ClassTreeInterface for CreateDotGraph {
+impl StructTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         self.current_classname.borrow_mut().push(fn_name);
 
@@ -141,8 +140,8 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     Ok(())
 }
 
-fn make_class_tree(callinfo: &[CallInfo]) -> class_tree::ClassTree {
-    let class_tree = class_tree::ClassTree::new();
+fn make_class_tree(callinfo: &[CallInfo]) -> StructTree {
+    let class_tree = StructTree::new();
     for c in callinfo.iter() {
         let mut fn_names_caller: Vec<&str> = c.caller.split("::").collect();
         fn_names_caller.pop().unwrap();

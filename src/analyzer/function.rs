@@ -1,13 +1,13 @@
-use crate::class_name::ClassName;
+use crate::struct_name::StructName;
 use syn;
 
-pub struct ClassInfo {
+pub struct StructInfo {
     current_class: Option<String>,
 }
 
-impl ClassInfo {
-    pub fn new() -> ClassInfo {
-        ClassInfo {
+impl StructInfo {
+    pub fn new() -> StructInfo {
+        StructInfo {
             current_class: None,
         }
     }
@@ -15,34 +15,33 @@ impl ClassInfo {
 
 #[derive(Debug, PartialEq)]
 pub struct FunctionType {
-    name: ClassName,
+    name: StructName,
     return_type: String,
 }
 
 impl FunctionType {
-    pub fn new(name: ClassName, return_type: String) -> FunctionType {
+    pub fn new(name: StructName, return_type: String) -> FunctionType {
         FunctionType { name, return_type }
     }
 }
 
 pub struct AnalyzerFunction {
     function_list: Vec<FunctionType>,
-    class_info: ClassInfo,
+    class_info: StructInfo,
 }
 
 impl AnalyzerFunction {
     pub fn new() -> AnalyzerFunction {
         AnalyzerFunction {
             function_list: Vec::new(),
-            class_info: ClassInfo::new(),
+            class_info: StructInfo::new(),
         }
     }
 }
 
 impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
-        // TODO class name??
-        let mut class_name = ClassName::new();
+        let mut class_name = StructName::new();
         class_name.push(&node.sig.ident.to_string());
 
         let output = &node.sig.output;
@@ -55,7 +54,7 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
     }
 
     fn visit_impl_item_method(&mut self, node: &'ast syn::ImplItemMethod) {
-        let mut class_name = ClassName::new();
+        let mut class_name = StructName::new();
         if let Some(x) = &self.class_info.current_class {
             class_name.push(x);
         }
@@ -102,7 +101,7 @@ mod tests {
         let syntax = syn::parse_file(src).unwrap();
         ana.visit_file(&syntax);
 
-        let class_name = ClassName::new_for_str("basic");
+        let class_name = StructName::new_for_str("basic");
         let func_type = FunctionType::new(class_name, "String".to_string());
         let expect = vec![func_type];
 
@@ -119,7 +118,7 @@ mod tests {
         let syntax = syn::parse_file(src).unwrap();
         ana.visit_file(&syntax);
 
-        let class_name = ClassName::new_for_str("ClassMethod::method");
+        let class_name = StructName::new_for_str("ClassMethod::method");
         let func_type = FunctionType::new(class_name, "String".to_string());
         let expect = vec![func_type];
 

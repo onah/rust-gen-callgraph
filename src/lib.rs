@@ -1,12 +1,9 @@
 mod analyzer;
-mod class_name;
-mod class_tree;
 mod create_dot_graph;
 mod dot_writer;
-//mod name_resolver;
-//mod create_graph;
+mod struct_name;
+mod struct_tree;
 
-//use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 
