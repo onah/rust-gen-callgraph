@@ -1,5 +1,3 @@
-extern crate rust_gen_callgraph;
-
 use std::env;
 use std::fs;
 use std::io;
@@ -27,6 +25,8 @@ fn get_sourcefile(path: PathBuf) -> Result<Vec<PathBuf>, io::Error> {
 
     Ok(result)
 }
+
+// TODO: use clap??
 
 fn main() {
     let mut args = env::args();

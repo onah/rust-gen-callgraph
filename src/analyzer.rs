@@ -1,4 +1,4 @@
-extern crate syn;
+//extern crate syn;
 mod callgraph;
 mod function;
 mod name_resolver;

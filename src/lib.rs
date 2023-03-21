@@ -1,6 +1,5 @@
 mod analyzer;
-mod create_dot_graph;
-mod dot_writer;
+mod create_graph;
 mod module_tree;
 mod struct_name;
 
@@ -45,5 +44,5 @@ pub fn run(input: Vec<PathBuf>) {
     //let mut f = File::create("graph.dot").unwrap();
     let mut f = io::BufWriter::new(io::stdout());
 
-    create_dot_graph::render_to(calls, &mut f).unwrap();
+    create_graph::render_to(calls, &mut f).unwrap();
 }
