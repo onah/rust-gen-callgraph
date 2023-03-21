@@ -2,7 +2,6 @@
 
 use super::parser_syn::SynStructName;
 use crate::struct_name::StructName;
-use syn;
 
 /// Save the current struct name when parsing
 struct StructInfo {

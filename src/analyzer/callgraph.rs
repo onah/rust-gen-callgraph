@@ -1,10 +1,6 @@
 use super::name_resolver::VariableDefine;
+use super::parser_syn::SynStructName;
 use super::CallInfo;
-use std::error;
-use std::ffi::OsStr;
-use std::fs::File;
-use std::io::Read;
-use std::path::PathBuf;
 
 enum KindCaller {
     Function(Vec<String>),
@@ -14,7 +10,6 @@ enum KindCaller {
 struct FnInfo {
     current_function: Option<KindCaller>,
     current_impl: Option<String>,
-    // filename: PathBuf,
 }
 
 impl FnInfo {
@@ -22,7 +17,6 @@ impl FnInfo {
         FnInfo {
             current_function: None,
             current_impl: None,
-            // filename: filename.clone(),
         }
     }
 
@@ -48,88 +42,30 @@ impl FnInfo {
     }
 }
 
-struct FileInfo {
-    //file_name: PathBuf,
-    module_name: String,
-}
-
-impl FileInfo {
-    pub fn new(file_name: PathBuf) -> Result<FileInfo, Box<dyn error::Error>> {
-        let module_name = FileInfo::get_module_name(&file_name)?;
-
-        let file_info = FileInfo {
-            //file_name,
-            module_name,
-        };
-        Ok(file_info)
-    }
-
-    fn get_module_name(file_name: &PathBuf) -> Result<String, Box<dyn error::Error>> {
-        let result;
-
-        if file_name == OsStr::new("./src/lib.rs") {
-            let mut f = File::open("Cargo.toml")?;
-            let mut contents = String::new();
-            f.read_to_string(&mut contents)?;
-
-            let values = contents.parse::<toml::Value>()?;
-            let project_name = values["package"]["name"].as_str().unwrap_or_else(|| "");
-            result = String::from(project_name);
-        } else if file_name.file_name().unwrap_or_else(|| OsStr::new("")) == OsStr::new("lib.rs") {
-            let mut filename2 = file_name.clone();
-            filename2.pop();
-            if filename2.file_name().unwrap() == OsStr::new("src") {
-                filename2.pop();
-                {
-                    // TODO Copy Code Refactoring
-                    let mut f = File::open(format!("{}/Cargo.toml", filename2.to_str().unwrap()))?;
-                    let mut contents = String::new();
-                    f.read_to_string(&mut contents)?;
-
-                    let values = contents.parse::<toml::Value>()?;
-                    let project_name = values["package"]["name"].as_str().unwrap();
-
-                    result = String::from(project_name);
-                }
-            } else {
-                result = filename2.file_stem().unwrap().to_str().unwrap().to_string();
-            }
-        } else {
-            result = file_name.file_stem().unwrap().to_str().unwrap().to_string();
-        }
-
-        Ok(result)
-    }
-
-    pub fn module_name(&self) -> &str {
-        &self.module_name
-    }
-}
-pub struct Analyzer {
+pub struct AnalyzerCallGraph {
     calls: Vec<CallInfo>,
     status: FnInfo,
     local_variables: Vec<VariableDefine>,
-    file_info: FileInfo,
+    module_name: String,
 }
 
-impl Analyzer {
-    pub fn new(file_name: PathBuf) -> Result<Analyzer, Box<dyn error::Error>> {
+impl AnalyzerCallGraph {
+    pub fn new(module_name: String) -> AnalyzerCallGraph {
         let calls: Vec<CallInfo> = Vec::new();
         let status = FnInfo::new();
         let local_variables: Vec<VariableDefine> = Vec::new();
-        let file_info: FileInfo = FileInfo::new(file_name)?;
-        Ok(Analyzer {
+        AnalyzerCallGraph {
             calls,
             status,
             local_variables,
-            file_info,
-        })
+            module_name,
+        }
     }
 
     fn push_callinfo(&mut self, callee: String) {
         let callinfo = CallInfo {
             callee,
-            caller: self.status.get_caller_name(self.file_info.module_name()),
+            caller: self.status.get_caller_name(&self.module_name),
         };
         self.calls.push(callinfo);
     }
@@ -139,26 +75,7 @@ impl Analyzer {
     }
 }
 
-fn punctuated_to_string(
-    punctuated: &syn::punctuated::Punctuated<syn::PathSegment, syn::token::Colon2>,
-) -> String {
-    let mut iter = punctuated.iter();
-
-    let first = match iter.next() {
-        Some(first) => first,
-        None => return "".to_string(),
-    };
-
-    let mut result = first.ident.to_string();
-    for i in iter {
-        result += "::";
-        result += &i.ident.to_string();
-    }
-
-    result
-}
-
-impl<'ast> syn::visit::Visit<'ast> for Analyzer {
+impl<'ast> syn::visit::Visit<'ast> for AnalyzerCallGraph {
     fn visit_item_mod(&mut self, node: &'ast syn::ItemMod) {
         // don't analyze test code
         for attr in &node.attrs {
@@ -182,7 +99,8 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         if let syn::Type::Path(type_path) = &*node.self_ty {
-            self.status.current_impl = Some(punctuated_to_string(&type_path.path.segments));
+            let impl_name = SynStructName::new(&type_path.path);
+            self.status.current_impl = Some(impl_name.to_string());
         }
 
         syn::visit::visit_item_impl(self, node);
@@ -199,15 +117,8 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
         if let syn::Expr::Path(expr_path) = &*node.func {
-            /*
-                let tmp = match expr_path.path.get_ident() {
-                    Some(x) => x.to_string(),
-                    None => "".to_string(),
-                };
-                println!("{}", tmp);
-            */
-
-            self.push_callinfo(punctuated_to_string(&expr_path.path.segments));
+            let callee_name = SynStructName::new(&expr_path.path);
+            self.push_callinfo(callee_name.to_string());
         }
         syn::visit::visit_expr_call(self, node);
     }
@@ -215,7 +126,8 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
     fn visit_expr_method_call(&mut self, node: &'ast syn::ExprMethodCall) {
         let mut method_name = String::new();
         if let syn::Expr::Path(expr_path) = &*node.receiver {
-            let receiver_name = punctuated_to_string(&expr_path.path.segments);
+            let path_name = SynStructName::new(&expr_path.path);
+            let receiver_name = path_name.to_string();
             if "self" == receiver_name {
                 method_name.push_str(
                     &(self
@@ -251,11 +163,12 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
         // ex. let var: Vec<String> = Vec::new()
         if let syn::Pat::Type(pat_type) = &node.pat {
             if let syn::Pat::Ident(ident) = &*pat_type.pat {
-                let name = (&ident).ident.to_string();
+                let name = ident.ident.to_string();
                 let mut variable_type = None;
 
                 if let syn::Type::Path(ty) = &*pat_type.ty {
-                    variable_type = Some(punctuated_to_string(&ty.path.segments));
+                    let struct_name = SynStructName::new(&ty.path);
+                    variable_type = Some(struct_name.to_string());
                 }
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);
@@ -265,11 +178,42 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
             let mut variable_type = None;
             if let Some(val) = &node.init {
                 if let syn::Expr::Path(expr_path) = &*val.1 {
-                    variable_type = Some(punctuated_to_string(&expr_path.path.segments));
+                    let struct_name = SynStructName::new(&expr_path.path);
+                    variable_type = Some(struct_name.to_string());
                 }
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);
             }
         }
+
+        syn::visit::visit_local(self, node);
+    }
+}
+
+// TODO FnInfo wo nantoka dekiruyou nisuru.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::visit::Visit;
+
+    #[test]
+    fn method_call() {
+        let src = r#"
+            fn func() {
+                let a = A::new();
+            }
+        "#;
+
+        let mut ana = AnalyzerCallGraph::new("module".to_string());
+        let syntax = syn::parse_file(&src).unwrap();
+        ana.visit_file(&syntax);
+
+        let expect_info = CallInfo {
+            callee: "A::new".to_string(),
+            caller: "module::func".to_string(),
+        };
+        let expect = vec![expect_info];
+
+        assert_eq!(ana.get_callinfo(), expect);
     }
 }

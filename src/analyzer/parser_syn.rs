@@ -1,5 +1,4 @@
 use std::fmt;
-use syn;
 
 pub struct SynStructName {
     path: syn::Path,
