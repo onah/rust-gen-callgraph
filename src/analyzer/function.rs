@@ -1,8 +1,11 @@
+//! Parse return type of a function or method
+
 use super::parser_syn::SynStructName;
 use crate::struct_name::StructName;
 use syn;
 
-pub struct StructInfo {
+/// Save the current struct name when parsing
+struct StructInfo {
     current_class: Option<String>,
 }
 
@@ -14,8 +17,9 @@ impl StructInfo {
     }
 }
 
+///
 #[derive(Debug, PartialEq)]
-pub struct FunctionType {
+struct FunctionType {
     name: StructName,
     return_type: String,
 }
@@ -28,14 +32,14 @@ impl FunctionType {
 
 pub struct AnalyzerFunction {
     function_list: Vec<FunctionType>,
-    class_info: StructInfo,
+    struct_info: StructInfo,
 }
 
 impl AnalyzerFunction {
     pub fn new() -> AnalyzerFunction {
         AnalyzerFunction {
             function_list: Vec::new(),
-            class_info: StructInfo::new(),
+            struct_info: StructInfo::new(),
         }
     }
 }
@@ -56,7 +60,7 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
 
     fn visit_impl_item_method(&mut self, node: &'ast syn::ImplItemMethod) {
         let mut class_name = StructName::new();
-        if let Some(x) = &self.class_info.current_class {
+        if let Some(x) = &self.struct_info.current_class {
             class_name.push(x);
         }
         class_name.push(&node.sig.ident.to_string());
@@ -70,10 +74,10 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         if let syn::Type::Path(type_path) = &*node.self_ty {
             let name = SynStructName::new(&type_path.path);
-            self.class_info.current_class = Some(name.to_string());
+            self.struct_info.current_class = Some(name.to_string());
         }
         syn::visit::visit_item_impl(self, node);
-        self.class_info.current_class = None;
+        self.struct_info.current_class = None;
     }
 }
 

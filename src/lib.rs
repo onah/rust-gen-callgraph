@@ -4,8 +4,8 @@ mod dot_writer;
 mod module_tree;
 mod struct_name;
 
+use std::io;
 use std::path::PathBuf;
-use std::{clone, io};
 
 /*
 #[derive(Debug)]
@@ -28,8 +28,7 @@ pub struct CallInfo {
 }
 
 pub fn run(input: Vec<PathBuf>) {
-    let mut calls: Vec<CallInfo> = Vec::new();
-    calls = analyzer::analyze(&input).unwrap();
+    let calls = analyzer::analyze(&input).unwrap();
 
     //for path in input {
     //    calls.append(&mut analyzer::analyze(path).unwrap());
