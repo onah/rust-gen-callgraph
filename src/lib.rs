@@ -4,8 +4,8 @@ mod dot_writer;
 mod module_tree;
 mod struct_name;
 
-use std::io;
 use std::path::PathBuf;
+use std::{clone, io};
 
 /*
 #[derive(Debug)]
@@ -21,7 +21,7 @@ pub struct CallInfo {
 }
 */
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct CallInfo {
     callee: String,
     caller: String,
@@ -29,9 +29,11 @@ pub struct CallInfo {
 
 pub fn run(input: Vec<PathBuf>) {
     let mut calls: Vec<CallInfo> = Vec::new();
-    for path in input {
-        calls.append(&mut analyzer::analyze(path).unwrap());
-    }
+    calls = analyzer::analyze(&input).unwrap();
+
+    //for path in input {
+    //    calls.append(&mut analyzer::analyze(path).unwrap());
+    //}
 
     //println!("{:#?}", calls);
 

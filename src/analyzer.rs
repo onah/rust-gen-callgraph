@@ -16,25 +16,38 @@ use syn::visit::Visit;
 
 // TODO: mod.rs wo module mei ni okikaeru
 
-pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
-    let mut analyzer = Analyzer::new(filename.clone())?;
+// pub fn analyze(filename: PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
+pub fn analyze(files: &Vec<PathBuf>) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
+    let mut result: Vec<CallInfo> = Vec::new();
     let mut analyzer_funtions = AnalyzerFunction::new();
 
-    let mut file = File::open(&filename)?;
-    let mut src = String::new();
-    file.read_to_string(&mut src)?;
+    for filename in files {
+        let mut file = File::open(&filename)?;
+        let mut src = String::new();
+        file.read_to_string(&mut src)?;
 
-    let hoge = syn::parse_file(&src)?;
-    analyzer_funtions.visit_file(&hoge);
-    //println!("{:#?}", analyzer_funtions);
+        let syntax = syn::parse_file(&src)?;
+        analyzer_funtions.visit_file(&syntax);
+    }
 
-    let syntax = syn::parse_file(&src)?;
+    for filename in files {
+        let mut analyzer = Analyzer::new(filename.clone())?;
 
-    analyzer.status.filename = Some(filename);
-    analyzer.visit_file(&syntax);
-    //analyzer.status.filename = None;
+        let mut file = File::open(&filename)?;
+        let mut src = String::new();
+        file.read_to_string(&mut src)?;
 
-    Ok(analyzer.calls)
+        let syntax = syn::parse_file(&src)?;
+        analyzer.status.filename = Some(filename.clone());
+        analyzer.visit_file(&syntax);
+        analyzer.status.filename = None;
+
+        let mut calls = analyzer.calls.clone();
+
+        result.append(&mut calls);
+    }
+
+    Ok(result)
 }
 
 enum KindCaller {
@@ -226,11 +239,13 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
 
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
         if let syn::Expr::Path(expr_path) = &*node.func {
-            let tmp = match expr_path.path.get_ident() {
-                Some(x) => x.to_string(),
-                None => "".to_string(),
-            };
-            println!("{}", tmp);
+            /*
+                let tmp = match expr_path.path.get_ident() {
+                    Some(x) => x.to_string(),
+                    None => "".to_string(),
+                };
+                println!("{}", tmp);
+            */
 
             self.push_callinfo(punctuated_to_string(&expr_path.path.segments));
         }
@@ -253,9 +268,11 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
             } else {
                 for v in &self.local_variables {
                     if v.same_name(&receiver_name) {
-                        let name = v.variable_type().unwrap_or_else(|| String::from("None"));
-                        method_name.push_str(&name);
-                        method_name.push_str("::");
+                        let ty = v.variable_type();
+                        if let Some(name) = ty {
+                            method_name.push_str(&name);
+                            method_name.push_str("::");
+                        }
                     }
                 }
             }
@@ -280,9 +297,6 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
                 if let syn::Type::Path(ty) = &*pat_type.ty {
                     variable_type = Some(punctuated_to_string(&ty.path.segments));
                 }
-
-                //println!("{} {}", name, variable_type.clone().unwrap());
-
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);
             }
@@ -291,7 +305,7 @@ impl<'ast> syn::visit::Visit<'ast> for Analyzer {
             let mut variable_type = None;
             if let Some(val) = &node.init {
                 if let syn::Expr::Path(expr_path) = &*val.1 {
-                    variable_type = Some(expr_path.path.get_ident().unwrap().to_string());
+                    variable_type = Some(punctuated_to_string(&expr_path.path.segments));
                 }
                 let var = VariableDefine::new(name, variable_type);
                 self.local_variables.push(var);

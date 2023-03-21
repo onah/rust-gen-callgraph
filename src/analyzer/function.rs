@@ -1,3 +1,4 @@
+use super::parser_syn::SynStructName;
 use crate::struct_name::StructName;
 use syn;
 
@@ -68,10 +69,8 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
 
     fn visit_item_impl(&mut self, node: &'ast syn::ItemImpl) {
         if let syn::Type::Path(type_path) = &*node.self_ty {
-            self.class_info.current_class = match &type_path.path.get_ident() {
-                Some(v) => Some(v.to_string()),
-                None => None,
-            };
+            let name = SynStructName::new(&type_path.path);
+            self.class_info.current_class = Some(name.to_string());
         }
         syn::visit::visit_item_impl(self, node);
         self.class_info.current_class = None;
@@ -83,7 +82,8 @@ fn output_to_return_type(output: &syn::ReturnType) -> Option<String> {
     if let syn::ReturnType::Type(_, ty) = output {
         let tmp = ty.clone();
         if let syn::Type::Path(type_path) = *tmp {
-            result = type_path.path.get_ident().map(|x| x.to_string());
+            let name = SynStructName::new(&type_path.path);
+            result = Some(name.to_string());
         }
     }
     result
