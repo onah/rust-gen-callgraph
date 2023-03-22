@@ -2,6 +2,7 @@
 name = "rust-gen-callgraph"
 version = "0.1.0"
 edition = "2018"
+description = "Genarate Callgraph for Rust."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,3 +11,4 @@ syn = { version = "1.0.74", features = ["parsing", "full", "extra-traits", "visi
 quote = "1.0"
 dot = "0.1.4"
 toml = "0.5"
+clap = { version = "4.1", features = ["derive"] }

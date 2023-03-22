@@ -1,8 +1,7 @@
-use std::env;
+use clap::Parser;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
-use std::process;
 
 fn get_sourcefile(path: PathBuf) -> Result<Vec<PathBuf>, io::Error> {
     let mut result: Vec<PathBuf> = Vec::new();
@@ -26,20 +25,19 @@ fn get_sourcefile(path: PathBuf) -> Result<Vec<PathBuf>, io::Error> {
     Ok(result)
 }
 
-// TODO: use clap??
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// path for the analyze directory.
+    dirname: PathBuf,
+    /// print for data type. (default ignore) ex. Vec, String.
+    #[arg(long)]
+    print_data_type: bool,
+}
 
 fn main() {
-    let mut args = env::args();
-    let _ = args.next();
+    let args = Args::parse();
 
-    let dirname = match (args.next(), args.next()) {
-        (Some(filename), None) => filename,
-        _ => {
-            eprintln!("Usage: callgraph path/to/dirname");
-            process::exit(1);
-        }
-    };
-
-    let sourcefiles = get_sourcefile(PathBuf::from(dirname)).unwrap();
-    rust_gen_callgraph::run(sourcefiles);
+    let sourcefiles = get_sourcefile(PathBuf::from(args.dirname)).unwrap();
+    rust_gen_callgraph::run(sourcefiles, args.print_data_type);
 }

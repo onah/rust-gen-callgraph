@@ -26,7 +26,7 @@ pub struct CallInfo {
     caller: String,
 }
 
-pub fn run(input: Vec<PathBuf>) {
+pub fn run(input: Vec<PathBuf>, print_data_type: bool) {
     let calls = analyzer::analyze(&input).unwrap();
 
     //for path in input {
@@ -44,5 +44,5 @@ pub fn run(input: Vec<PathBuf>) {
     //let mut f = File::create("graph.dot").unwrap();
     let mut f = io::BufWriter::new(io::stdout());
 
-    create_graph::render_to(calls, &mut f).unwrap();
+    create_graph::render_to(calls, &mut f, print_data_type).unwrap();
 }

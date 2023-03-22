@@ -6,9 +6,13 @@ use crate::CallInfo;
 use create_dot_graph::CreateDotGraph;
 use std::io;
 
-pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
+pub fn render_to<W: io::Write>(
+    callinfos: Vec<CallInfo>,
+    output: &mut W,
+    print_data_type: bool,
+) -> io::Result<()> {
     let class_tree = make_module_tree(&callinfos);
-    let create_dot_graph = CreateDotGraph::new(callinfos);
+    let create_dot_graph = CreateDotGraph::new(callinfos, print_data_type);
 
     output.write_all(dot_writer::start().as_bytes())?;
     output.write_all(create_dot_graph.write_node_label().as_bytes())?;

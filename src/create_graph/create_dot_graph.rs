@@ -9,6 +9,7 @@ struct CallInfoWithWrited {
     callinfo: CallInfo,
     writed: RefCell<bool>,
 }
+
 pub struct CreateDotGraph {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
     cluster_counter: RefCell<usize>,
@@ -16,10 +17,8 @@ pub struct CreateDotGraph {
     result: RefCell<String>,
 }
 
-// TODO: std api ha hyouji sinai (ex. Vec, Hashset, etc)
-
 impl CreateDotGraph {
-    pub fn new(callinfos: Vec<CallInfo>) -> CreateDotGraph {
+    pub fn new(callinfos: Vec<CallInfo>, print_data_type: bool) -> CreateDotGraph {
         let mut callinfos_with_writed: Vec<CallInfoWithWrited> = Vec::new();
 
         // remove duplicates
@@ -31,13 +30,18 @@ impl CreateDotGraph {
         for c in callinfos_no_dup {
             // TODO: zantei teki ni class ga nai mono (:: ga nai mono) ha nozoku
             // honrai ha nakutemo yoi hazu
-            if c.callee.contains("::") && c.caller.contains("::") {
+            //if c.callee.contains("::") && c.caller.contains("::") {
+            if !print_data_type
+                && !CreateDotGraph::is_data_type(&c.callee)
+                && !CreateDotGraph::is_data_type(&c.caller)
+            {
                 let cww = CallInfoWithWrited {
                     callinfo: c,
                     writed: RefCell::new(false),
                 };
                 callinfos_with_writed.push(cww);
             }
+            //}
         }
         CreateDotGraph {
             callinfos: RefCell::new(callinfos_with_writed),
@@ -73,6 +77,16 @@ impl CreateDotGraph {
     }
     pub fn borrow_mut_result(&self) -> std::cell::RefMut<String> {
         self.result.borrow_mut()
+    }
+
+    fn is_data_type(name: &str) -> bool {
+        let data_types = vec!["String", "Vec"];
+        for ty in data_types {
+            if name.starts_with(ty) {
+                return true;
+            };
+        }
+        false
     }
 }
 
