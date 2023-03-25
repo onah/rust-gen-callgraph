@@ -1,8 +1,8 @@
 mod create_dot_graph;
 mod dot_writer;
 
+use crate::call_data::CallInfo;
 use crate::module_tree::ModuleTree;
-use crate::CallInfo;
 use create_dot_graph::CreateDotGraph;
 use std::io;
 

@@ -1,4 +1,5 @@
 mod analyzer;
+mod call_data;
 mod create_graph;
 mod module_tree;
 mod struct_name;
@@ -7,12 +8,6 @@ use std::error;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
-
-#[derive(Debug, Eq, Hash, PartialEq, Clone)]
-pub struct CallInfo {
-    callee: String,
-    caller: String,
-}
 
 pub fn run(directory: PathBuf, print_data_type: bool) -> Result<(), Box<dyn error::Error>> {
     let sourcefiles = get_sourcefile(directory)?;

@@ -6,7 +6,7 @@ mod parser_syn;
 
 use self::callgraph::AnalyzerCallGraph;
 use self::function::AnalyzerFunction;
-use super::CallInfo;
+use crate::call_data::CallInfo;
 use std::error;
 use std::ffi::OsStr;
 use std::fs::File;
