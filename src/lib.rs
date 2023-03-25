@@ -3,22 +3,10 @@ mod create_graph;
 mod module_tree;
 mod struct_name;
 
+use std::error;
+use std::fs;
 use std::io;
 use std::path::PathBuf;
-
-/*
-#[derive(Debug)]
-pub struct FunctionInfo {
-    path: Vec<String>,
-    name: String,
-}
-
-#[derive(Debug)]
-pub struct CallInfo {
-    callee: FunctionInfo,
-    caller: FunctionInfo,
-}
-*/
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct CallInfo {
@@ -26,23 +14,36 @@ pub struct CallInfo {
     caller: String,
 }
 
-pub fn run(input: Vec<PathBuf>, print_data_type: bool) {
-    let calls = analyzer::analyze(&input).unwrap();
+pub fn run(directory: PathBuf, print_data_type: bool) -> Result<(), Box<dyn error::Error>> {
+    let sourcefiles = get_sourcefile(directory)?;
+    let calls = analyzer::analyze(&sourcefiles)?;
 
-    //for path in input {
-    //    calls.append(&mut analyzer::analyze(path).unwrap());
-    //}
-
-    //println!("{:#?}", calls);
-
-    // let graph = create_graph::GraphData::new(calls);
-    // println!("{:#?}", graph);
-
-    // let mut f = File::create("graph.dot").unwrap();
-    // create_graph::render_to(graph, &mut f);
-
-    //let mut f = File::create("graph.dot").unwrap();
     let mut f = io::BufWriter::new(io::stdout());
+    create_graph::render_to(calls, &mut f, print_data_type)?;
 
-    create_graph::render_to(calls, &mut f, print_data_type).unwrap();
+    Ok(())
+}
+
+/// create a file list from the specified directory.
+/// Find files with extension rs recursively.
+fn get_sourcefile(path: PathBuf) -> Result<Vec<PathBuf>, io::Error> {
+    let mut result: Vec<PathBuf> = Vec::new();
+
+    let dirfiles = fs::read_dir(path)?;
+    for item in dirfiles {
+        let dirfile = item?;
+
+        // recursive to directory
+        if dirfile.metadata()?.is_dir() {
+            result.append(&mut get_sourcefile(dirfile.path())?);
+        }
+
+        if let Some(v) = dirfile.path().extension() {
+            if v == "rs" {
+                result.push(dirfile.path());
+            }
+        }
+    }
+
+    Ok(result)
 }
