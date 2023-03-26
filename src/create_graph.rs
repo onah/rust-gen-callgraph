@@ -1,9 +1,10 @@
 mod create_dot_graph;
 mod dot_writer;
+mod module_tree;
 
 use crate::call_data::CallInfo;
-use crate::module_tree::ModuleTree;
 use create_dot_graph::CreateDotGraph;
+use module_tree::ModuleTree;
 use std::io;
 
 pub fn render_to<W: io::Write>(
