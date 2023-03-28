@@ -11,4 +11,5 @@ syn = { version = "1.0.74", features = ["parsing", "full", "extra-traits", "visi
 quote = "1.0"
 dot = "0.1.4"
 toml = "0.5"
+thiserror = "1.0"
 clap = { version = "4.1", features = ["derive"] }
