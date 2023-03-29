@@ -10,6 +10,7 @@ impl SynStructName {
     }
 }
 
+// for to_string()
 impl fmt::Display for SynStructName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut iter = self.path.segments.iter();

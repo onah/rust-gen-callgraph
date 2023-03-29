@@ -190,7 +190,6 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerCallGraph {
     }
 }
 
-// TODO FnInfo wo nantoka dekiruyou nisuru.
 #[cfg(test)]
 mod tests {
     use super::*;
