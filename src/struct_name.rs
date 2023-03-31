@@ -1,4 +1,5 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
+
 pub struct StructName {
     names: Vec<String>,
 }

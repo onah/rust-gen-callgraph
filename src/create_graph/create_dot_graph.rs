@@ -10,6 +10,7 @@ struct CallInfoWithWrited {
     writed: RefCell<bool>,
 }
 
+#[derive(Eq, PartialEq, Hash)]
 pub enum ClusterDataType {
     Single(StructName),
     CallInfo(CallInfo),
@@ -17,7 +18,7 @@ pub enum ClusterDataType {
 
 pub struct ClusterData {
     cluster_name: String,
-    nodes: Vec<ClusterDataType>,
+    nodes: HashSet<ClusterDataType>,
 }
 
 impl ClusterData {
@@ -25,7 +26,7 @@ impl ClusterData {
         &self.cluster_name
     }
 
-    pub fn get_nodes(&self) -> &Vec<ClusterDataType> {
+    pub fn get_nodes(&self) -> &HashSet<ClusterDataType> {
         &self.nodes
     }
 }
@@ -127,7 +128,7 @@ impl ModuleTreeInterface for CreateDotGraph {
         // *result += &format!("label=\"{}\"\n", self.current_classname.borrow().name());
         let mut cluster_data = ClusterData {
             cluster_name: self.current_classname.borrow().name(),
-            nodes: Vec::new(),
+            nodes: HashSet::new(),
         };
 
         // TODO duplicate*
@@ -147,16 +148,18 @@ impl ModuleTreeInterface for CreateDotGraph {
                     //let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
                     //let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
                     //*result += &format!("{} -> {}\n", caller_name, callee_name);
-                    cluster_data.nodes.push(ClusterDataType::CallInfo(CallInfo {
-                        callee: callinfo.callinfo.callee.clone(),
-                        caller: callinfo.callinfo.caller.clone(),
-                    }));
+                    cluster_data
+                        .nodes
+                        .insert(ClusterDataType::CallInfo(CallInfo {
+                            callee: callinfo.callinfo.callee.clone(),
+                            caller: callinfo.callinfo.caller.clone(),
+                        }));
                 } else {
                     //let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
                     //*result += &format!("{}\n", callee_name);
                     cluster_data
                         .nodes
-                        .push(ClusterDataType::Single(StructName::new_for_str(
+                        .insert(ClusterDataType::Single(StructName::new_for_str(
                             &callinfo.callinfo.callee,
                         )));
                 }
@@ -169,7 +172,7 @@ impl ModuleTreeInterface for CreateDotGraph {
                 //*result += &format!("{}\n", caller_name);
                 cluster_data
                     .nodes
-                    .push(ClusterDataType::Single(StructName::new_for_str(
+                    .insert(ClusterDataType::Single(StructName::new_for_str(
                         &callinfo.callinfo.caller,
                     )));
             }
