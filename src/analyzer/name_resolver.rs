@@ -1,8 +1,12 @@
+use super::function::AnalyzerFunction;
+use super::function::FunctionType;
+
 use std::error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
+use syn::visit::Visit;
 use thiserror::Error;
 
 pub struct VariableDefine {
@@ -69,3 +73,36 @@ fn get_project_name_from_cargo_toml(cargo_file: &PathBuf) -> Result<String, Box<
 
     Ok(String::from(project_name))
 }
+
+struct ResolveName {
+    functions: Vec<FunctionType>,
+}
+
+impl ResolveName {
+    pub fn new(files: &Vec<PathBuf>) -> Result<ResolveName, Box<dyn error::Error>> {
+        let functions = create_function_list(files)?;
+        Ok(ResolveName{functions})
+    }
+
+    pub fn resolve_name(&self, name: &str) -> String {
+        name.to_string()
+    }    
+}
+
+fn create_function_list(files: &Vec<PathBuf>) -> Result<Vec<FunctionType>, Box<dyn error::Error>> {
+    let mut result = Vec::new();
+    for filename in files {
+        let mut file = File::open(filename)?;
+        let mut src = String::new();
+        file.read_to_string(&mut src)?;
+
+        let syntax = syn::parse_file(&src)?;
+        let mut analyzer_funtions = AnalyzerFunction::new();
+        analyzer_funtions.visit_file(&syntax);
+
+        result.append(analyzer_funtions.get_function_list());
+    }
+
+    Ok(result)
+}
+

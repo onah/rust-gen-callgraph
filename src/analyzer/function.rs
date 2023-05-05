@@ -18,7 +18,7 @@ impl StructInfo {
 
 ///
 #[derive(Debug, PartialEq)]
-struct FunctionType {
+pub struct FunctionType {
     name: StructName,
     return_type: String,
 }
@@ -40,6 +40,10 @@ impl AnalyzerFunction {
             function_list: Vec::new(),
             struct_info: StructInfo::new(),
         }
+    }
+
+    pub fn get_function_list(&mut self) -> &mut Vec<FunctionType> {
+        &mut self.function_list
     }
 }
 

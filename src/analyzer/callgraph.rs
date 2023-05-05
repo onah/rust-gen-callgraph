@@ -1,3 +1,4 @@
+use super::datas::FullStrcutName;
 use super::name_resolver::VariableDefine;
 use super::parser_syn::SynStructName;
 use super::CallInfo;
@@ -117,8 +118,10 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerCallGraph {
 
     fn visit_expr_call(&mut self, node: &'ast syn::ExprCall) {
         if let syn::Expr::Path(expr_path) = &*node.func {
-            let callee_name = SynStructName::new(&expr_path.path);
-            self.push_callinfo(callee_name.to_string());
+            let callee = SynStructName::new(&expr_path.path);
+            let mut callee_name = callee.name();
+            check_callee_path(&mut callee_name, &self.module_name);
+            self.push_callinfo(callee_name.fullname());
         }
         syn::visit::visit_expr_call(self, node);
     }
@@ -190,6 +193,16 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerCallGraph {
     }
 }
 
+fn check_callee_path(callee: &mut FullStrcutName, module: &str) {
+    // use wo check site onaji kansu ga aruka
+    // file wo kakunin site onaji kansu mei ga aruka
+    // onaji dattara sentou ni module mei wo huyo
+
+    // zantei
+    //callee.insert_first(module);
+    return;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,7 +221,7 @@ mod tests {
         ana.visit_file(&syntax);
 
         let expect_info = CallInfo {
-            callee: "A::new".to_string(),
+            callee: "module::A::new".to_string(),
             caller: "module::func".to_string(),
         };
         let expect = vec![expect_info];

@@ -1,3 +1,4 @@
+use super::datas;
 use std::fmt;
 
 pub struct SynStructName {
@@ -7,6 +8,23 @@ pub struct SynStructName {
 impl SynStructName {
     pub fn new(path: &syn::Path) -> SynStructName {
         SynStructName { path: path.clone() }
+    }
+
+    pub fn name(&self) -> datas::FullStrcutName {
+        let mut result = datas::FullStrcutName::new();
+
+        let mut iter = self.path.segments.iter();
+        let first = match iter.next() {
+            Some(first) => first,
+            None => return result,
+        };
+
+        result.push(&first.ident.to_string());
+        for i in iter {
+            result.push(&i.ident.to_string());
+        }
+
+        result
     }
 }
 

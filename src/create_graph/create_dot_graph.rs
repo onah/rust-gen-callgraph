@@ -33,9 +33,7 @@ impl ClusterData {
 
 pub struct CreateDotGraph {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
-    cluster_counter: RefCell<usize>,
     current_classname: RefCell<StructName>,
-    //result: RefCell<String>,
     result: RefCell<Vec<ClusterData>>,
 }
 
@@ -67,7 +65,6 @@ impl CreateDotGraph {
         }
         CreateDotGraph {
             callinfos: RefCell::new(callinfos_with_writed),
-            cluster_counter: RefCell::new(0),
             current_classname: RefCell::new(StructName::new()),
             result: RefCell::new(Vec::new()),
         }
@@ -123,15 +120,11 @@ impl ModuleTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         self.current_classname.borrow_mut().push(fn_name);
 
-        //let mut result = self.result.borrow_mut();
-        // *result += &format!("subgraph cluster_{} {{\n", self.cluster_counter.borrow());
-        // *result += &format!("label=\"{}\"\n", self.current_classname.borrow().name());
         let mut cluster_data = ClusterData {
             cluster_name: self.current_classname.borrow().name(),
             nodes: HashSet::new(),
         };
 
-        // TODO duplicate*
         for callinfo in &*self.callinfos.borrow() {
             if callinfo
                 .callinfo
@@ -145,9 +138,6 @@ impl ModuleTreeInterface for CreateDotGraph {
                 {
                     *callinfo.writed.borrow_mut() = true;
 
-                    //let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
-                    //let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
-                    //*result += &format!("{} -> {}\n", caller_name, callee_name);
                     cluster_data
                         .nodes
                         .insert(ClusterDataType::CallInfo(CallInfo {
@@ -155,8 +145,6 @@ impl ModuleTreeInterface for CreateDotGraph {
                             caller: callinfo.callinfo.caller.clone(),
                         }));
                 } else {
-                    //let callee_name = &callinfo.callinfo.callee.replace([':', '-'], "_");
-                    //*result += &format!("{}\n", callee_name);
                     cluster_data
                         .nodes
                         .insert(ClusterDataType::Single(StructName::new_for_str(
@@ -168,8 +156,6 @@ impl ModuleTreeInterface for CreateDotGraph {
                 .caller
                 .starts_with(&self.current_classname.borrow().name())
             {
-                //let caller_name = &callinfo.callinfo.caller.replace([':', '-'], "_");
-                //*result += &format!("{}\n", caller_name);
                 cluster_data
                     .nodes
                     .insert(ClusterDataType::Single(StructName::new_for_str(
@@ -181,16 +167,11 @@ impl ModuleTreeInterface for CreateDotGraph {
         let mut result = self.result.borrow_mut();
         result.push(cluster_data);
 
-        *self.cluster_counter.borrow_mut() += 1;
         true
     }
 
     fn exec_search_after(&self, _fn_name: &str) -> bool {
         self.current_classname.borrow_mut().pop().unwrap();
-
-        //let mut result = self.result.borrow_mut();
-        //*result += "}\n";
-
         true
     }
 }
