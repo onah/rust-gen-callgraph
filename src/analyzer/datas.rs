@@ -19,6 +19,7 @@ impl FullStrcutName {
         self.name.join("::")
     }
 }
+
 /*
 // for to_string()
 use std::fmt;

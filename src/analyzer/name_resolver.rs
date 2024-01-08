@@ -40,9 +40,9 @@ pub enum ErrorKind {
 
 /// Check the module name to which the file belongs.
 /// If filename is lib.rs, then we check the Cargo.toml
-pub fn get_module_name(file_path: &PathBuf) -> Result<String, Box<dyn error::Error>> {
+pub fn get_full_class_path(file_path: &PathBuf) -> Result<String, Box<dyn error::Error>> {
     let file_name = file_path.file_name().ok_or(ErrorKind::InvalidFilename)?;
-    if file_name == OsString::from("lib.rs") {
+    if file_name == OsString::from("lib.rs") || file_name == OsString::from("main.rs") {
         // If the file name is lib.rs, there is cargo.toml up two.
         let parent_dir = file_path.parent().ok_or(ErrorKind::InvalidLocLibRs)?;
         let cargo_dir = parent_dir.parent().ok_or(ErrorKind::InvalidLocLibRs)?;
@@ -50,7 +50,6 @@ pub fn get_module_name(file_path: &PathBuf) -> Result<String, Box<dyn error::Err
 
         return get_project_name_from_cargo_toml(&cargo_file);
     }
-
     let result = file_path.file_stem().ok_or(ErrorKind::InvalidFilename)?;
     let result = result.to_str().ok_or(ErrorKind::InvalidFilename)?;
 
@@ -76,7 +75,7 @@ pub struct NameResolver {
 
 impl NameResolver {
     pub fn new(file_path: &PathBuf) -> Result<NameResolver, Box<dyn error::Error>> {
-        let full_class_path = get_module_name(file_path)?;
+        let full_class_path = get_full_class_path(file_path)?;
 
         Ok(NameResolver { full_class_path })
     }
