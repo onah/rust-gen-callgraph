@@ -1,12 +1,8 @@
-use super::function::AnalyzerFunction;
-use super::function::FunctionType;
-
 use std::error;
 use std::ffi::OsString;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
-use syn::visit::Visit;
 use thiserror::Error;
 
 pub struct VariableDefine {
@@ -74,19 +70,41 @@ fn get_project_name_from_cargo_toml(cargo_file: &PathBuf) -> Result<String, Box<
     Ok(String::from(project_name))
 }
 
-struct ResolveName {
+pub struct NameResolver {
+    full_class_path: String,
+}
+
+impl NameResolver {
+    pub fn new(file_path: &PathBuf) -> Result<NameResolver, Box<dyn error::Error>> {
+        let full_class_path = get_module_name(file_path)?;
+
+        Ok(NameResolver { full_class_path })
+    }
+
+    pub fn resolve_caller(&self) -> String {
+        self.full_class_path.clone()
+    }
+
+    pub fn resolve_callee(&self) -> String {
+        self.full_class_path.clone()
+    }
+}
+
+/*
+
+struct NameResolver {
     functions: Vec<FunctionType>,
 }
 
-impl ResolveName {
-    pub fn new(files: &Vec<PathBuf>) -> Result<ResolveName, Box<dyn error::Error>> {
+impl NameResolver {
+    pub fn new(files: &Vec<PathBuf>) -> Result<NameResolver, Box<dyn error::Error>> {
         let functions = create_function_list(files)?;
-        Ok(ResolveName{functions})
+        Ok(NameResolver { functions })
     }
 
     pub fn resolve_name(&self, name: &str) -> String {
         name.to_string()
-    }    
+    }
 }
 
 fn create_function_list(files: &Vec<PathBuf>) -> Result<Vec<FunctionType>, Box<dyn error::Error>> {
@@ -106,3 +124,4 @@ fn create_function_list(files: &Vec<PathBuf>) -> Result<Vec<FunctionType>, Box<d
     Ok(result)
 }
 
+*/

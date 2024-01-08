@@ -35,8 +35,8 @@ pub fn analyze(files: &Vec<PathBuf>) -> Result<Vec<CallInfo>, Box<dyn error::Err
         //
         let mut funcs = AnalyzerFunction::new();
 
-        let module_name = name_resolver::get_module_name(filename)?;
-        let mut analyzer = AnalyzerCallGraph::new(module_name);
+        let resolver = name_resolver::NameResolver::new(filename)?;
+        let mut analyzer = AnalyzerCallGraph::new(resolver);
 
         let mut file = File::open(filename)?;
         let mut src = String::new();

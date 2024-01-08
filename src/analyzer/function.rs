@@ -41,10 +41,6 @@ impl AnalyzerFunction {
             struct_info: StructInfo::new(),
         }
     }
-
-    pub fn get_function_list(&mut self) -> &mut Vec<FunctionType> {
-        &mut self.function_list
-    }
 }
 
 impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
