@@ -17,4 +17,5 @@ fn main() {
         eprintln!("{}", err);
         std::process::exit(2);
     }
+    std::process::exit(0);
 }
