@@ -1,7 +1,7 @@
 use super::dot_writer;
 use super::module_tree::ModuleTreeInterface;
 use crate::call_data::CallInfo;
-use crate::struct_name::StructName;
+use crate::call_data::StructName;
 use std::cell::RefCell;
 use std::collections::HashSet;
 

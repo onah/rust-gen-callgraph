@@ -1,7 +1,7 @@
 mod analyzer;
 mod call_data;
 mod create_graph;
-mod struct_name;
+//mod struct_name;
 
 use std::error;
 use std::io;

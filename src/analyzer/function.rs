@@ -1,7 +1,7 @@
 //! Parse return type of a function or method
 
 use super::parser_syn::SynStructName;
-use crate::struct_name::StructName;
+use crate::call_data::StructName;
 
 /// Save the current struct name when parsing
 struct StructInfo {
