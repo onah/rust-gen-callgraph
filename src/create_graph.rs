@@ -8,13 +8,9 @@ use create_dot_graph::CreateDotGraph;
 use module_tree::ModuleTree;
 use std::io;
 
-pub fn render_to<W: io::Write>(
-    callinfos: Vec<CallInfo>,
-    output: &mut W,
-    print_data_type: bool,
-) -> io::Result<()> {
+pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
     let class_tree = make_module_tree(&callinfos);
-    let create_dot_graph = CreateDotGraph::new(callinfos, print_data_type);
+    let create_dot_graph = CreateDotGraph::new(callinfos);
 
     let mut dot_writer = dot_writer::DotWriter::new();
 

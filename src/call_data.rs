@@ -29,7 +29,7 @@ impl StructName {
     }
 }
 
-#[derive(Debug, Eq, Hash, PartialEq, Clone)]
+#[derive(Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Clone)]
 pub struct CallInfo {
     pub callee: String,
     pub caller: String,
