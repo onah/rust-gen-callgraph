@@ -94,19 +94,31 @@ mod tests {
     }
     #[test]
     fn it_works() {
-        let funcs = "A::B::C".to_string();
-        let vs: Vec<&str> = funcs.split("::").collect();
-
         let root = ModuleTree::new();
 
+        let funcs = "A::B::C".to_string();
+        let vs: Vec<&str> = funcs.split("::").collect();
         root.push(&vs);
 
         let funcs = "A::B::D".to_string();
         let vs: Vec<&str> = funcs.split("::").collect();
+        root.push(&vs);
 
+        let funcs = "A::E::F".to_string();
+        let vs: Vec<&str> = funcs.split("::").collect();
         root.push(&vs);
 
         // expect
+        let f = ModuleTree {
+            fn_name: "F".to_string(),
+            nodes: RefCell::new(Vec::new()),
+        };
+
+        let e = ModuleTree {
+            fn_name: "E".to_string(),
+            nodes: RefCell::new(vec![f]),
+        };
+
         let c = ModuleTree {
             fn_name: "C".to_string(),
             nodes: RefCell::new(Vec::new()),
@@ -124,7 +136,7 @@ mod tests {
 
         let a = ModuleTree {
             fn_name: "A".to_string(),
-            nodes: RefCell::new(vec![b]),
+            nodes: RefCell::new(vec![b, e]),
         };
 
         let expect_root = ModuleTree {
@@ -142,6 +154,6 @@ mod tests {
         root.search_preorder(&test_interface);
 
         let result = test_interface.test_strings.borrow().join("");
-        assert_eq!(result, "A+B+C+C-D+D-B-A-")
+        assert_eq!(result, "A+B+C+C-D+D-B-E+F+F-E-A-")
     }
 }
