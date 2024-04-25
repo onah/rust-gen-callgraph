@@ -4,6 +4,7 @@ mod datas;
 mod function;
 mod name_resolver;
 mod parser_syn;
+mod project_infomation;
 
 use self::callgraph::AnalyzerCallGraph;
 use self::function::AnalyzerFunction;
@@ -20,8 +21,9 @@ use syn::visit::Visit;
 
 //pub fn analyze(files: &Vec<PathBuf>) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
 pub fn analyze(directory: &PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Error>> {
+    let project_info = project_infomation::ProjectInfomaion::new(directory)?;
     let mut result: Vec<CallInfo> = Vec::new();
-    let mut analyzer_funtions = AnalyzerFunction::new();
+    let mut analyzer_funtions = AnalyzerFunction::new(project_info.project_name().to_string());
 
     let files = get_sourcefile(directory)?;
 
@@ -34,11 +36,9 @@ pub fn analyze(directory: &PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Erro
         analyzer_funtions.visit_file(&syntax);
     }
 
-    //println!("{:#?}", analyzer_funtions.get_function_list());
-
     for filename in &files {
         //
-        let mut funcs = AnalyzerFunction::new();
+        let mut funcs = AnalyzerFunction::new(project_info.project_name().to_string());
 
         let resolver = name_resolver::NameResolver::new(filename)?;
         let mut analyzer = AnalyzerCallGraph::new(resolver);

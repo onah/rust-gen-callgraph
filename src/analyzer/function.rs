@@ -1,7 +1,10 @@
 //! Parse return type of a function or method
-
 use super::parser_syn::SynStructName;
 use crate::call_data::StructName;
+
+pub struct FunctionContainer {
+    pub functions: Vec<FunctionType>,
+}
 
 /// Save the current struct name when parsing
 struct StructInfo {
@@ -30,13 +33,15 @@ impl FunctionType {
 }
 
 pub struct AnalyzerFunction {
+    project_name: String,
     function_list: Vec<FunctionType>,
     struct_info: StructInfo,
 }
 
 impl AnalyzerFunction {
-    pub fn new() -> AnalyzerFunction {
+    pub fn new(project_name: String) -> AnalyzerFunction {
         AnalyzerFunction {
+            project_name,
             function_list: Vec::new(),
             struct_info: StructInfo::new(),
         }
@@ -46,6 +51,7 @@ impl AnalyzerFunction {
 impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
     fn visit_item_fn(&mut self, node: &'ast syn::ItemFn) {
         let mut class_name = StructName::new();
+        class_name.push(&self.project_name);
         class_name.push(&node.sig.ident.to_string());
 
         let output = &node.sig.output;
@@ -59,6 +65,7 @@ impl<'ast> syn::visit::Visit<'ast> for AnalyzerFunction {
 
     fn visit_impl_item_method(&mut self, node: &'ast syn::ImplItemMethod) {
         let mut class_name = StructName::new();
+        class_name.push(&self.project_name);
         if let Some(x) = &self.struct_info.current_class {
             class_name.push(x);
         }
