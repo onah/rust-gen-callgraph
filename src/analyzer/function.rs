@@ -2,10 +2,6 @@
 use super::parser_syn::SynStructName;
 use crate::call_data::StructName;
 
-pub struct FunctionContainer {
-    pub functions: Vec<FunctionType>,
-}
-
 /// Save the current struct name when parsing
 struct StructInfo {
     current_class: Option<String>,
@@ -106,12 +102,12 @@ mod tests {
 
     #[test]
     fn basic() {
-        let mut ana = AnalyzerFunction::new();
+        let mut ana = AnalyzerFunction::new("my_project".to_string());
         let src = "fn basic() -> String {}";
         let syntax = syn::parse_file(src).unwrap();
         ana.visit_file(&syntax);
 
-        let class_name = StructName::new_for_str("basic");
+        let class_name = StructName::new_for_str("my_project::basic");
         let func_type = FunctionType::new(class_name, "String".to_string());
         let expect = vec![func_type];
 
@@ -119,7 +115,7 @@ mod tests {
     }
     #[test]
     fn class_method() {
-        let mut ana = AnalyzerFunction::new();
+        let mut ana = AnalyzerFunction::new("my_project".to_string());
         let src = r#"
         impl ClassMethod {
             fn method() -> String {}
@@ -128,7 +124,7 @@ mod tests {
         let syntax = syn::parse_file(src).unwrap();
         ana.visit_file(&syntax);
 
-        let class_name = StructName::new_for_str("ClassMethod::method");
+        let class_name = StructName::new_for_str("my_project::ClassMethod::method");
         let func_type = FunctionType::new(class_name, "String".to_string());
         let expect = vec![func_type];
 

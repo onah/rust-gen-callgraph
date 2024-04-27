@@ -7,12 +7,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ErrorKind {
-    #[error("Invalid location from lib.rs")]
-    InvalidLocLibRs,
     #[error("Invalid package name in cargo.toml")]
     InvalidPackageName,
-    #[error("Invalid filename")]
-    InvalidFilename,
 }
 
 pub struct ProjectInfomaion {
