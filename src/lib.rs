@@ -1,7 +1,7 @@
 mod analyzer;
 mod call_data;
-mod create_graph;
 mod filter;
+mod output;
 
 use std::error;
 use std::io;
@@ -17,7 +17,7 @@ pub fn run(directory: PathBuf, print_data_type: bool) -> Result<(), Box<dyn erro
 
     // Create graph
     let mut f = io::BufWriter::new(io::stdout());
-    create_graph::render_to(callinfo_list, &mut f)?;
+    output::render_to(callinfo_list, &mut f)?;
 
     Ok(())
 }
