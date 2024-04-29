@@ -10,12 +10,18 @@ use std::io;
 
 pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
     let class_tree = make_module_tree(&callinfos);
+    //println!("{:?}", class_tree);
+
     let create_dot_graph = CreateDotGraph::new(callinfos);
 
     let mut dot_writer = dot_writer::DotWriter::new();
 
     output.write_all(dot_writer::start().as_bytes())?;
-    output.write_all(create_dot_graph.write_node_label().as_bytes())?;
+    //output.write_all(create_dot_graph.write_node_label().as_bytes())?;
+    for pathname in create_dot_graph.get_all_node() {
+        let node = dot_writer::node(&pathname);
+        output.write_all(node.as_bytes())?;
+    }
 
     class_tree.search_preorder(&create_dot_graph);
 

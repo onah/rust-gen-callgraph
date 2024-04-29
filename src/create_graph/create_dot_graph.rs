@@ -78,21 +78,22 @@ impl CreateDotGraph {
         result
     }
 
-    pub fn write_node_label(&self) -> String {
+    pub fn get_all_node(&self) -> HashSet<String> {
         // remove duplicate
-        let mut path_names: HashSet<&str> = HashSet::new();
+        let mut path_names: HashSet<String> = HashSet::new();
         let borrowed_callinfo = self.callinfos.borrow();
 
         for callinfo in &*borrowed_callinfo {
-            path_names.insert(&callinfo.callinfo.callee);
-            path_names.insert(&callinfo.callinfo.caller);
+            path_names.insert(callinfo.callinfo.callee.clone());
+            path_names.insert(callinfo.callinfo.caller.clone());
         }
+        path_names
 
-        let mut result = String::new();
-        for path_name in path_names {
-            result += &dot_writer::node(path_name);
-        }
-        result
+        //let mut result = String::new();
+        //for path_name in path_names {
+        //    result += &dot_writer::node(path_name);
+        //}
+        //result
     }
 
     pub fn borrow_result(&self) -> std::cell::Ref<Vec<ClusterData>> {
