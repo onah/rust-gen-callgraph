@@ -1,10 +1,10 @@
-mod create_dot_graph;
 mod dot_writer;
+mod graph_creator;
 mod module_tree;
 
 use crate::call_data::CallInfo;
-use create_dot_graph::ClusterDataType;
-use create_dot_graph::CreateDotGraph;
+use graph_creator::ClusterDataType;
+use graph_creator::CreateDotGraph;
 use module_tree::ModuleTree;
 use std::io;
 
