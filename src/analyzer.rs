@@ -10,9 +10,7 @@ use self::callgraph::AnalyzerCallGraph;
 use self::function::AnalyzerFunction;
 use crate::call_data::CallInfo;
 use std::error;
-use std::fs;
 use std::fs::File;
-use std::io;
 use std::io::Read;
 use std::path::PathBuf;
 use syn::visit::Visit;
@@ -25,9 +23,9 @@ pub fn analyze(directory: &PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Erro
     let mut result: Vec<CallInfo> = Vec::new();
     let mut analyzer_funtions = AnalyzerFunction::new(project_info.project_name().to_string());
 
-    let files = get_sourcefile(directory)?;
+    let files = project_info.source_files();
 
-    for filename in &files {
+    for filename in files {
         let mut file = File::open(filename)?;
         let mut src = String::new();
         file.read_to_string(&mut src)?;
@@ -36,7 +34,7 @@ pub fn analyze(directory: &PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Erro
         analyzer_funtions.visit_file(&syntax);
     }
 
-    for filename in &files {
+    for filename in files {
         //
         let mut funcs = AnalyzerFunction::new(project_info.project_name().to_string());
 
@@ -71,30 +69,6 @@ pub fn analyze(directory: &PathBuf) -> Result<Vec<CallInfo>, Box<dyn error::Erro
         */
         let mut calls = analyzer.get_callinfo();
         result.append(&mut calls);
-    }
-
-    Ok(result)
-}
-
-/// create a file list from the specified directory.
-/// Find files with extension rs recursively.
-fn get_sourcefile(path: &PathBuf) -> Result<Vec<PathBuf>, io::Error> {
-    let mut result: Vec<PathBuf> = Vec::new();
-
-    let dirfiles = fs::read_dir(path)?;
-    for item in dirfiles {
-        let dirfile = item?;
-
-        // recursive to directory
-        if dirfile.metadata()?.is_dir() {
-            result.append(&mut get_sourcefile(&dirfile.path())?);
-        }
-
-        if let Some(v) = dirfile.path().extension() {
-            if v == "rs" {
-                result.push(dirfile.path());
-            }
-        }
     }
 
     Ok(result)
