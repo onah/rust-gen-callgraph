@@ -2,7 +2,7 @@ mod dot_writer;
 mod graph_creator;
 mod module_tree;
 
-use crate::call_data::CallInfo;
+use crate::call_info::CallInfo;
 use graph_creator::ClusterDataType;
 use graph_creator::CreateDotGraph;
 use module_tree::ModuleTree;

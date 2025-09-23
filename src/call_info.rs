@@ -1,4 +1,4 @@
-/// call_data is a module for storing call information.
+/// call_info is a module for storing call information.
 
 /// Represents a simple function call relationship in the call graph.
 ///
@@ -12,7 +12,7 @@
 ///
 /// # Example
 /// ```
-/// use rust_gen_callgraph::call_data::CallInfo;
+/// use rust_gen_callgraph::call_info::CallInfo;
 /// let call = CallInfo {
 ///     caller: "my_project::foo::bar".to_string(),
 ///     callee: "my_project::baz::qux".to_string(),
@@ -24,11 +24,4 @@
 pub struct CallInfo {
     pub callee: String,
     pub caller: String,
-}
-
-#[cfg(test)]
-mod tests {
-    // use super::*; // No longer needed
-
-    // All StructName tests removed. All names are now handled as String.
 }

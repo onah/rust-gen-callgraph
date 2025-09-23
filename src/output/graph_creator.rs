@@ -1,6 +1,6 @@
 use super::dot_writer;
 use super::module_tree::ModuleTreeInterface;
-use crate::call_data::CallInfo;
+use crate::call_info::CallInfo;
 // StructName removed; use String instead
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -96,10 +96,10 @@ impl CreateDotGraph {
         //result
     }
 
-    pub fn borrow_result(&self) -> std::cell::Ref<Vec<ClusterData>> {
+    pub fn borrow_result(&self) -> std::cell::Ref<'_, Vec<ClusterData>> {
         self.result.borrow()
     }
-    pub fn borrow_mut_result(&self) -> std::cell::RefMut<Vec<ClusterData>> {
+    pub fn borrow_mut_result(&self) -> std::cell::RefMut<'_, Vec<ClusterData>> {
         self.result.borrow_mut()
     }
 }

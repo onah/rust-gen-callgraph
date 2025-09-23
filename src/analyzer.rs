@@ -8,7 +8,7 @@ mod project_infomation;
 
 use self::callgraph::AnalyzerCallGraph;
 use self::function::AnalyzerFunction;
-use crate::call_data::CallInfo;
+use crate::call_info::CallInfo;
 use std::error;
 use std::fs::File;
 use std::io::Read;
