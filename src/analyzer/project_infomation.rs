@@ -12,6 +12,55 @@ pub enum ErrorKind {
     InvalidPackageName,
 }
 
+pub struct StructPath {
+    path: Vec<String>,
+}
+impl StructPath {
+    pub fn new() -> StructPath {
+        StructPath { path: Vec::new() }
+    }
+
+    pub fn push(&mut self, name: &str) {
+        self.path.push(String::from(name));
+    }
+
+    pub fn fullname(&self) -> String {
+        self.path.join("::")
+    }
+}
+pub struct SourceInfomation {
+    file_path: PathBuf,
+}
+
+impl SourceInfomation {
+    pub fn new(file_path: &PathBuf) -> SourceInfomation {
+        SourceInfomation {
+            file_path: file_path.clone(),
+        }
+    }
+
+    pub fn file_path(&self) -> &PathBuf {
+        &self.file_path
+    }
+
+    pub fn get_struct_path(&self) -> StructPath {
+        let mut result = StructPath::new();
+
+        if let Some(parent_path) = self.file_path.parent() {
+            // Convert path components to module path
+            for component in parent_path.components() {
+                if let std::path::Component::Normal(os_str) = component {
+                    if let Some(component_str) = os_str.to_str() {
+                        result.push(component_str);
+                    }
+                }
+            }
+        }
+
+        result
+    }
+}
+
 pub struct ProjectInfomaion {
     project_name: String,
     source_files: Vec<PathBuf>,
@@ -83,6 +132,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_get_struct_path() {
+        let file_path = PathBuf::from("src/analyzer/project_infomation.rs");
+        let source_info = SourceInfomation::new(&file_path);
+        let struct_path = source_info.get_struct_path();
+        assert_eq!(struct_path.fullname(), "src::analyzer");
+    }
+
+    #[test]
     fn test_get_project_name_from_cargo_toml() {
         let cargo_toml_content = r#"
             [package]
@@ -93,16 +150,4 @@ mod tests {
             .expect("Failed to get project name from cargo.toml");
         assert_eq!(project_name, "test");
     }
-
-    /*
-    #[test]
-    fn test_get_project_name_from_cargo_toml_invalid_package_name() {
-        let cargo_toml_content = r#"
-            [package]
-            version = "0.1.0"
-        "#;
-        let project_name = ProjectInfomaion::get_project_name_from_cargo_toml(cargo_toml_content);
-        assert!(project_name.is_err());
-    }
-    */
 }
