@@ -1,7 +1,7 @@
 use super::dot_writer;
 use super::module_tree::ModuleTreeInterface;
 use crate::call_data::CallInfo;
-use crate::call_data::StructName;
+// StructName removed; use String instead
 use std::cell::RefCell;
 use std::collections::HashSet;
 
@@ -12,7 +12,7 @@ struct CallInfoWithWrited {
 
 #[derive(Eq, PartialEq, Hash)]
 pub enum ClusterDataType {
-    Single(StructName),
+    Single(String),
     CallInfo(CallInfo),
 }
 
@@ -33,7 +33,7 @@ impl ClusterData {
 
 pub struct CreateDotGraph {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
-    current_classname: RefCell<StructName>,
+    current_classname: RefCell<String>,
     result: RefCell<Vec<ClusterData>>,
 }
 
@@ -62,7 +62,7 @@ impl CreateDotGraph {
         }
         CreateDotGraph {
             callinfos: RefCell::new(callinfos_with_writed),
-            current_classname: RefCell::new(StructName::new()),
+            current_classname: RefCell::new(String::new()),
             result: RefCell::new(Vec::new()),
         }
     }
@@ -106,26 +106,23 @@ impl CreateDotGraph {
 
 impl ModuleTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
-        self.current_classname.borrow_mut().push(fn_name);
-
+        {
+            let mut cc = self.current_classname.borrow_mut();
+            if !cc.is_empty() {
+                cc.push_str("::");
+            }
+            cc.push_str(fn_name);
+        }
         let mut cluster_data = ClusterData {
-            cluster_name: self.current_classname.borrow().name(),
+            cluster_name: self.current_classname.borrow().clone(),
             nodes: HashSet::new(),
         };
 
+        let current_name = self.current_classname.borrow();
         for callinfo in &*self.callinfos.borrow() {
-            if callinfo
-                .callinfo
-                .callee
-                .starts_with(&self.current_classname.borrow().name())
-            {
-                if callinfo
-                    .callinfo
-                    .caller
-                    .starts_with(&self.current_classname.borrow().name())
-                {
+            if callinfo.callinfo.callee.starts_with(&*current_name) {
+                if callinfo.callinfo.caller.starts_with(&*current_name) {
                     *callinfo.writed.borrow_mut() = true;
-
                     cluster_data
                         .nodes
                         .insert(ClusterDataType::CallInfo(CallInfo {
@@ -135,20 +132,12 @@ impl ModuleTreeInterface for CreateDotGraph {
                 } else {
                     cluster_data
                         .nodes
-                        .insert(ClusterDataType::Single(StructName::new_for_str(
-                            &callinfo.callinfo.callee,
-                        )));
+                        .insert(ClusterDataType::Single(callinfo.callinfo.callee.clone()));
                 }
-            } else if callinfo
-                .callinfo
-                .caller
-                .starts_with(&self.current_classname.borrow().name())
-            {
+            } else if callinfo.callinfo.caller.starts_with(&*current_name) {
                 cluster_data
                     .nodes
-                    .insert(ClusterDataType::Single(StructName::new_for_str(
-                        &callinfo.callinfo.caller,
-                    )));
+                    .insert(ClusterDataType::Single(callinfo.callinfo.caller.clone()));
             }
         }
 
@@ -159,7 +148,14 @@ impl ModuleTreeInterface for CreateDotGraph {
     }
 
     fn exec_search_after(&self, _fn_name: &str) -> bool {
-        self.current_classname.borrow_mut().pop().unwrap();
+        {
+            let mut cc = self.current_classname.borrow_mut();
+            if let Some(idx) = cc.rfind("::") {
+                cc.truncate(idx);
+            } else {
+                cc.clear();
+            }
+        }
         true
     }
 }

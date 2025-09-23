@@ -32,7 +32,7 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
         for c in cluster_data.get_nodes() {
             match c {
                 ClusterDataType::Single(single) => {
-                    let name = dot_writer::single_edge(&single.name());
+                    let name = dot_writer::single_edge(single);
                     output.write_all(name.as_bytes())?;
                 }
                 ClusterDataType::CallInfo(callinfo) => {

@@ -1,5 +1,5 @@
 mod analyzer;
-mod call_data;
+pub mod call_data;
 mod filter;
 mod output;
 
