@@ -5,12 +5,12 @@ mod module_tree;
 use crate::call_info::CallInfo;
 use graph_creator::ClusterDataType;
 use graph_creator::CreateDotGraph;
-use module_tree::ModuleTree;
+use module_tree::ClassPathTree;
 use std::io;
 
 pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::Result<()> {
-    let class_tree = make_module_tree(&callinfos);
-    //println!("{:?}", class_tree);
+    let classpath_tree = make_classpath_tree(&callinfos);
+    //println!("{:?}", classpath_tree);
 
     let create_dot_graph = CreateDotGraph::new(callinfos);
 
@@ -23,7 +23,7 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
         output.write_all(node.as_bytes())?;
     }
 
-    class_tree.search_preorder(&create_dot_graph);
+    classpath_tree.search_preorder(&create_dot_graph);
 
     for cluster_data in &*create_dot_graph.borrow_result() {
         let cluster = dot_writer.start_cluster(cluster_data.get_cluseter_name());
@@ -52,8 +52,8 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     Ok(())
 }
 
-fn make_module_tree(callinfo: &[CallInfo]) -> ModuleTree {
-    let module_tree = ModuleTree::new();
+fn make_classpath_tree(callinfo: &[CallInfo]) -> ClassPathTree {
+    let module_tree = ClassPathTree::new();
     for c in callinfo.iter() {
         let mut fn_names_caller: Vec<&str> = c.caller.split("::").collect();
         fn_names_caller.pop().unwrap();

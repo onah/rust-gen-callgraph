@@ -1,5 +1,5 @@
 use super::dot_writer;
-use super::module_tree::ModuleTreeInterface;
+use super::module_tree::ClassPathTreeInterface;
 use crate::call_info::CallInfo;
 // StructName removed; use String instead
 use std::cell::RefCell;
@@ -104,7 +104,7 @@ impl CreateDotGraph {
     }
 }
 
-impl ModuleTreeInterface for CreateDotGraph {
+impl ClassPathTreeInterface for CreateDotGraph {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         {
             let mut cc = self.current_classname.borrow_mut();
