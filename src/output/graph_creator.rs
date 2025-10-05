@@ -31,14 +31,14 @@ impl ClusterData {
     }
 }
 
-pub struct CreateDotGraph {
+pub struct DotGraphBuilder {
     callinfos: RefCell<Vec<CallInfoWithWrited>>,
     current_classname: RefCell<String>,
     result: RefCell<Vec<ClusterData>>,
 }
 
-impl CreateDotGraph {
-    pub fn new(callinfos: Vec<CallInfo>) -> CreateDotGraph {
+impl DotGraphBuilder {
+    pub fn new(callinfos: Vec<CallInfo>) -> DotGraphBuilder {
         let mut callinfos_with_writed: Vec<CallInfoWithWrited> = Vec::new();
 
         // remove duplicates
@@ -60,7 +60,7 @@ impl CreateDotGraph {
 
             //}
         }
-        CreateDotGraph {
+        DotGraphBuilder {
             callinfos: RefCell::new(callinfos_with_writed),
             current_classname: RefCell::new(String::new()),
             result: RefCell::new(Vec::new()),
@@ -104,7 +104,7 @@ impl CreateDotGraph {
     }
 }
 
-impl ClassPathTreeInterface for CreateDotGraph {
+impl ClassPathTreeInterface for DotGraphBuilder {
     fn exec_search_before(&self, fn_name: &str) -> bool {
         {
             let mut cc = self.current_classname.borrow_mut();

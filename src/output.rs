@@ -4,7 +4,7 @@ mod module_tree;
 
 use crate::call_info::CallInfo;
 use graph_creator::ClusterDataType;
-use graph_creator::CreateDotGraph;
+use graph_creator::DotGraphBuilder;
 use module_tree::ClassPathTree;
 use std::io;
 
@@ -12,7 +12,7 @@ pub fn render_to<W: io::Write>(callinfos: Vec<CallInfo>, output: &mut W) -> io::
     let classpath_tree = make_classpath_tree(&callinfos);
     //println!("{:?}", classpath_tree);
 
-    let create_dot_graph = CreateDotGraph::new(callinfos);
+    let create_dot_graph = DotGraphBuilder::new(callinfos);
 
     let mut dot_writer = dot_writer::DotWriter::new();
 
